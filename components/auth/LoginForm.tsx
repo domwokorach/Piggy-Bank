@@ -29,6 +29,10 @@ export function LoginForm() {
     try {
       const result = await login(identifier, password, remember)
       if (!result.ok) {
+        if (result.code === 'RESET_REQUIRED') {
+          router.push(`/forgot-password?email=${encodeURIComponent(identifier)}`)
+          return
+        }
         setError(result.error ?? 'Something went wrong.')
         return
       }

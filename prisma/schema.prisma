@@ -27,10 +27,11 @@ model User {
   emailVerified Boolean       @default(false)
   status        AccountStatus @default(ACTIVE)
 
-  // Bumped whenever all active sessions must be revoked (e.g. account closure).
-  // A session's JWT carries the version it was issued under; a mismatch invalidates it.
-  sessionVersion Int       @default(0)
-  lastLoginAt    DateTime?
+  lastLoginAt DateTime?
+
+  // Forced on by a "No, secure my account" security response — blocks login
+  // until the password is reset via the PIN-based reset flow below.
+  mustResetPassword Boolean @default(false)
 
   verificationPinHash      String?
   verificationPinExpiresAt DateTime?
@@ -44,10 +45,107 @@ model User {
   closureRequestedAt     DateTime?
   closedAt               DateTime?
 
+  resetPinHash        String?
+  resetPinExpiresAt   DateTime?
+  resetAttempts       Int       @default(0)
+  resetPinLastSentAt  DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@map("users")
+}
+
+enum DeviceType {
+  MOBILE_PHONE
+  TABLET
+  DESKTOP
+  UNKNOWN
+}
+
+enum LoginStatus {
+  SUCCESS
+  FAILED
+  BLOCKED
+}
+
+model Device {
+  id     String @id @default(cuid())
+  userId String
+
+  // Opaque, long-lived identifier from the `piggy_device` cookie (or native
+  // Capacitor device id) — the actual recognition key, independent of UA.
+  deviceId String
+
+  label      String
+  deviceType DeviceType @default(UNKNOWN)
+  os         String?
+  browser    String?
+  // Only ever populated when reliably present in the UA/native info —
+  // never a guessed/invented model.
+  model      String?
+
+  trusted Boolean @default(false)
+
+  lastIp       String?
+  lastCity     String?
+  lastCountry  String?
+  lastActiveAt DateTime @default(now())
+
+  confirmedAt DateTime?
+  blockedAt   DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, deviceId])
+  @@index([userId])
+  @@map("devices")
+}
+
+model Session {
+  id       String  @id @default(cuid())
+  userId   String
+  deviceRowId String?
+
+  userAgent String?
+  ip        String?
+
+  createdAt  DateTime  @default(now())
+  lastSeenAt DateTime  @default(now())
+  revokedAt  DateTime?
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model LoginEvent {
+  id     String @id @default(cuid())
+  // Nullable so failed attempts against an unknown identifier can still be
+  // logged (and rate-limited on) without a matching user.
+  userId String?
+
+  deviceRowId String?
+  sessionId   String?
+
+  status      LoginStatus
+  isNewDevice Boolean     @default(false)
+
+  ip         String?
+  city       String?
+  country    String?
+  userAgent  String?
+  os         String?
+  browser    String?
+  deviceType DeviceType?
+
+  confirmedAt     DateTime?
+  confirmedAsSelf Boolean?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([ip])
+  @@map("login_events")
 }
 
 model AccountAuditLog {

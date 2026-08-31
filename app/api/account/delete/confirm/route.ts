@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
-import { getAuthenticatedUser, logAccountEvent } from '@/lib/auth'
+import { getAuthenticatedUser, logAccountEvent, revokeAllSessionsForUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { clearSession } from '@/lib/session'
+import { clearSessionCookie } from '@/lib/session'
 import { sendAccountClosedEmail } from '@/lib/email'
 
 const VERIFIED_CONFIRM_WINDOW_MS = 10 * 60 * 1000
@@ -34,7 +34,6 @@ export async function POST() {
     data: {
       status: 'CLOSED',
       closedAt: new Date(),
-      sessionVersion: { increment: 1 },
       deletionPinHash: null,
       deletionPinExpiresAt: null,
       deletionAttempts: 0,
@@ -43,8 +42,9 @@ export async function POST() {
     },
   })
 
+  await revokeAllSessionsForUser(user.id)
   await logAccountEvent(user.id, 'account_closed')
-  await clearSession()
+  await clearSessionCookie()
 
   try {
     await sendAccountClosedEmail(user.email, user.firstName)

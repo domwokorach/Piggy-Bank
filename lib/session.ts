@@ -11,18 +11,20 @@ function secretKey() {
 
 export interface Session {
   userId: string
-  sessionVersion: number
+  sessionId: string
   issuedAt: number
 }
 
-export async function createSession(userId: string, sessionVersion: number): Promise<void> {
-  const token = await new SignJWT({ sv: sessionVersion })
+export async function signSessionToken(userId: string, sessionId: string): Promise<string> {
+  return new SignJWT({ sid: sessionId })
     .setProtectedHeader({ alg: 'HS256' })
     .setSubject(userId)
     .setIssuedAt()
     .setExpirationTime(`${SESSION_DURATION_SECONDS}s`)
     .sign(secretKey())
+}
 
+export async function setSessionCookie(token: string): Promise<void> {
   const cookieStore = await cookies()
   cookieStore.set(SESSION_COOKIE, token, {
     httpOnly: true,
@@ -33,7 +35,7 @@ export async function createSession(userId: string, sessionVersion: number): Pro
   })
 }
 
-export async function clearSession(): Promise<void> {
+export async function clearSessionCookie(): Promise<void> {
   const cookieStore = await cookies()
   cookieStore.delete(SESSION_COOKIE)
 }
@@ -45,10 +47,10 @@ export async function readSession(): Promise<Session | null> {
 
   try {
     const { payload } = await jwtVerify(token, secretKey())
-    if (typeof payload.sub !== 'string' || typeof payload.sv !== 'number' || typeof payload.iat !== 'number') {
+    if (typeof payload.sub !== 'string' || typeof payload.sid !== 'string' || typeof payload.iat !== 'number') {
       return null
     }
-    return { userId: payload.sub, sessionVersion: payload.sv, issuedAt: payload.iat }
+    return { userId: payload.sub, sessionId: payload.sid, issuedAt: payload.iat }
   } catch {
     return null
   }

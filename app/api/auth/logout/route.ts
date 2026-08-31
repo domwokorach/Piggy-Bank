@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
-import { clearSession } from '@/lib/session'
+import { revokeCurrentSession } from '@/lib/auth'
 
 export async function POST() {
-  await clearSession()
+  await revokeCurrentSession()
   return NextResponse.json({ ok: true })
 }

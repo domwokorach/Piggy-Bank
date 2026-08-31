@@ -1,5 +1,6 @@
 import { useBankStore } from '@/store/bank-store'
 import { validateRegistration } from '@/lib/validation'
+import { getNativeDeviceInfo } from '@/lib/native-device'
 import { pushNotification } from './notification.service'
 import type { ServiceResult } from './types'
 import type { Parent, RegistrationDraft } from '@/types'
@@ -9,10 +10,12 @@ import type { Parent, RegistrationDraft } from '@/types'
  * Prisma/Postgres, Resend, and a signed session cookie (see app/api/auth/*).
  */
 export async function login(identifier: string, password: string, remember: boolean): Promise<ServiceResult> {
+  const nativeDevice = await getNativeDeviceInfo()
+
   const response = await fetch('/api/auth/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ identifier, password }),
+    body: JSON.stringify({ identifier, password, nativeDevice }),
   })
   const result: (ServiceResult & { parent?: Parent }) = await response.json()
   if (!result.ok) {
@@ -26,6 +29,24 @@ export async function login(identifier: string, password: string, remember: bool
   setAuthenticated(true, remember)
 
   return { ok: true }
+}
+
+export async function requestPasswordReset(email: string): Promise<ServiceResult> {
+  const response = await fetch('/api/auth/forgot-password', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  })
+  return response.json()
+}
+
+export async function resetPassword(email: string, pin: string, newPassword: string): Promise<ServiceResult> {
+  const response = await fetch('/api/auth/reset-password', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, pin, newPassword }),
+  })
+  return response.json()
 }
 
 export async function logout(): Promise<void> {

@@ -26,6 +26,13 @@ export function useAuth() {
 
   const logout = useCallback(() => authService.logout(), [])
 
+  const requestPasswordReset = useCallback((email: string) => authService.requestPasswordReset(email), [])
+
+  const resetPassword = useCallback(
+    (email: string, pin: string, newPassword: string) => authService.resetPassword(email, pin, newPassword),
+    [],
+  )
+
   return {
     isAuthenticated,
     parent,
@@ -35,5 +42,7 @@ export function useAuth() {
     resendPin,
     verifyPin,
     logout,
+    requestPasswordReset,
+    resetPassword,
   }
 }

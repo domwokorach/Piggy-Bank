@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Bell, ChevronRight, LogOut, Mail, Phone, PiggyBank, ShieldAlert, User } from 'lucide-react'
+import { Bell, ChevronRight, Laptop, LogOut, Mail, Phone, PiggyBank, ShieldAlert, User } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ParentCard } from '@/components/accounts/ParentCard'
@@ -75,19 +75,31 @@ export default function SettingsPage() {
 
       <section className="rounded-2xl border border-border bg-card shadow-sm">
         <h2 className="px-5 pt-4 text-sm font-semibold text-foreground">Security</h2>
-        <Link
-          href="/settings/delete-account"
-          className="flex items-center gap-3 px-5 py-3.5 transition-colors hover:bg-muted"
-        >
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-destructive/10 text-destructive">
-            <ShieldAlert className="h-4.5 w-4.5" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium text-foreground">Delete account</p>
-            <p className="text-xs text-muted-foreground">Permanently close your Piggy Bank account</p>
-          </div>
-          <ChevronRight className="h-4 w-4 text-muted-foreground" />
-        </Link>
+        <div className="divide-y divide-border">
+          <Link href="/settings/devices" className="flex items-center gap-3 px-5 py-3.5 transition-colors hover:bg-muted">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-accent text-accent-foreground">
+              <Laptop className="h-4.5 w-4.5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium text-foreground">Devices</p>
+              <p className="text-xs text-muted-foreground">Manage devices signed in to your account</p>
+            </div>
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          </Link>
+          <Link
+            href="/settings/delete-account"
+            className="flex items-center gap-3 px-5 py-3.5 transition-colors hover:bg-muted"
+          >
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-destructive/10 text-destructive">
+              <ShieldAlert className="h-4.5 w-4.5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium text-foreground">Delete account</p>
+              <p className="text-xs text-muted-foreground">Permanently close your Piggy Bank account</p>
+            </div>
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          </Link>
+        </div>
       </section>
 
       <Button variant="destructive" className="h-11 w-full" onClick={handleLogout}>

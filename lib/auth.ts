@@ -1,15 +1,53 @@
 import { prisma } from '@/lib/prisma'
-import { readSession, type Session } from '@/lib/session'
-import type { Prisma, User } from '@/prisma/generated/client'
+import { clearSessionCookie, readSession, setSessionCookie, signSessionToken, type Session } from '@/lib/session'
+import type { Prisma, Session as SessionRow, User } from '@/prisma/generated/client'
 
-export async function getAuthenticatedUser(): Promise<{ user: User; session: Session } | null> {
+export async function getAuthenticatedUser(): Promise<{ user: User; session: Session; sessionRow: SessionRow } | null> {
   const session = await readSession()
   if (!session) return null
 
-  const user = await prisma.user.findUnique({ where: { id: session.userId } })
-  if (!user || user.sessionVersion !== session.sessionVersion) return null
+  const sessionRow = await prisma.session.findUnique({ where: { id: session.sessionId } })
+  if (!sessionRow || sessionRow.revokedAt || sessionRow.userId !== session.userId) return null
 
-  return { user, session }
+  const user = await prisma.user.findUnique({ where: { id: session.userId } })
+  if (!user) return null
+
+  return { user, session, sessionRow }
+}
+
+export async function createSessionForUser(
+  userId: string,
+  options: { deviceRowId?: string; ip?: string; userAgent?: string } = {},
+): Promise<string> {
+  const sessionRow = await prisma.session.create({
+    data: { userId, deviceRowId: options.deviceRowId, ip: options.ip, userAgent: options.userAgent },
+  })
+  const token = await signSessionToken(userId, sessionRow.id)
+  await setSessionCookie(token)
+  return sessionRow.id
+}
+
+export async function revokeCurrentSession(): Promise<void> {
+  const session = await readSession()
+  if (session) {
+    await prisma.session.updateMany({ where: { id: session.sessionId }, data: { revokedAt: new Date() } })
+  }
+  await clearSessionCookie()
+}
+
+export async function revokeSession(sessionId: string): Promise<void> {
+  await prisma.session.updateMany({ where: { id: sessionId }, data: { revokedAt: new Date() } })
+}
+
+export async function revokeAllSessionsForUser(userId: string, exceptSessionId?: string): Promise<void> {
+  await prisma.session.updateMany({
+    where: { userId, revokedAt: null, ...(exceptSessionId ? { id: { not: exceptSessionId } } : {}) },
+    data: { revokedAt: new Date() },
+  })
+}
+
+export async function revokeSessionsForDevice(deviceRowId: string): Promise<void> {
+  await prisma.session.updateMany({ where: { deviceRowId, revokedAt: null }, data: { revokedAt: new Date() } })
 }
 
 export function logAccountEvent(userId: string, event: string, metadata?: Record<string, unknown>) {

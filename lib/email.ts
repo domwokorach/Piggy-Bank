@@ -69,6 +69,73 @@ export async function sendTransactionReceiptEmail(
   )
 }
 
+export interface LoginAlertDetails {
+  date: string
+  time: string
+  location: string
+  deviceLabel: string
+  os: string
+  browser: string
+  maskedIp: string
+}
+
+export async function sendNewLoginAlertEmail(
+  to: string,
+  firstName: string,
+  details: LoginAlertDetails,
+  confirmUrl: string,
+  blockUrl: string,
+): Promise<void> {
+  await send(
+    to,
+    'New login to your Piggy Bank account',
+    `
+      <p>Hi ${firstName},</p>
+      <p>We noticed a login to your Piggy Bank account from a device or location we don't recognise.</p>
+      <table style="border-collapse: collapse; margin-top: 12px;">
+        <tr><td style="padding: 4px 16px 4px 0; color: #666;">Date</td><td>${details.date}</td></tr>
+        <tr><td style="padding: 4px 16px 4px 0; color: #666;">Time</td><td>${details.time}</td></tr>
+        <tr><td style="padding: 4px 16px 4px 0; color: #666;">Approximate location</td><td>${details.location}</td></tr>
+        <tr><td style="padding: 4px 16px 4px 0; color: #666;">Device</td><td>${details.deviceLabel}</td></tr>
+        <tr><td style="padding: 4px 16px 4px 0; color: #666;">Operating system</td><td>${details.os}</td></tr>
+        <tr><td style="padding: 4px 16px 4px 0; color: #666;">Browser</td><td>${details.browser}</td></tr>
+        <tr><td style="padding: 4px 16px 4px 0; color: #666;">IP address</td><td>${details.maskedIp}</td></tr>
+      </table>
+      <p style="margin-top: 16px; font-weight: 600;">Was this you?</p>
+      <p>
+        <a href="${confirmUrl}" style="display: inline-block; padding: 10px 20px; background: #16a34a; color: #fff; text-decoration: none; border-radius: 8px; margin-right: 8px;">Yes, it was me</a>
+        <a href="${blockUrl}" style="display: inline-block; padding: 10px 20px; background: #dc2626; color: #fff; text-decoration: none; border-radius: 8px;">No, secure my account</a>
+      </p>
+      <p style="margin-top: 16px; color: #666; font-size: 13px;">These links expire in 3 days. Location is approximate and based on IP address, not GPS.</p>
+    `,
+  )
+}
+
+export async function sendSecurityAlertBlockedEmail(to: string, firstName: string): Promise<void> {
+  await send(
+    to,
+    'Your Piggy Bank account has been secured',
+    `
+      <p>Hi ${firstName},</p>
+      <p>As requested, we've secured your account: the suspicious session was signed out, the device has been blocked, and you'll need to reset your password before logging in again.</p>
+      <p>If you didn't request this, please contact support immediately.</p>
+    `,
+  )
+}
+
+export async function sendPasswordResetPinEmail(to: string, firstName: string, pin: string): Promise<void> {
+  await send(
+    to,
+    'Reset your Piggy Bank password',
+    `
+      <p>Hi ${firstName},</p>
+      <p>Use this code to reset your Piggy Bank password:</p>
+      <p style="font-size: 28px; font-weight: 600; letter-spacing: 0.3em;">${pin}</p>
+      <p>This code expires in 10 minutes. If you didn't request this, you can ignore this email — your password will not change.</p>
+    `,
+  )
+}
+
 export async function sendAccountClosedEmail(to: string, firstName: string): Promise<void> {
   await send(
     to,
