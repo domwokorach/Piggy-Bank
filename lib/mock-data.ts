@@ -28,6 +28,8 @@ export const seedParent: Parent = {
   avatarUrl: undefined,
   balance: 4238.62,
   status: 'active',
+  accountNumberLast4: '4821',
+  cardLast4: '4821',
 }
 
 export const seedKids: Kid[] = [

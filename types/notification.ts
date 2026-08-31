@@ -15,6 +15,7 @@ export type NotificationType =
   | 'account_closure_requested'
   | 'account_closure_cancelled'
   | 'account_closed'
+  | 'card_details_viewed'
 
 export interface SecurityLoginAlert {
   deviceLabel: string

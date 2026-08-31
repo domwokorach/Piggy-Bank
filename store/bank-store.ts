@@ -37,9 +37,13 @@ interface BankState {
 
   registrationDraft: RegistrationDraft | null
 
+  // Salted hash only — the security PIN itself is never stored or persisted.
+  securityPinHash: string | null
+
   setAuthenticated: (value: boolean, remember?: boolean) => void
   setParent: (patch: Partial<Parent>) => void
   setRegistrationDraft: (draft: RegistrationDraft | null) => void
+  setSecurityPinHash: (hash: string | null) => void
 
   addKidRecord: (kid: Kid) => void
   addCardRecord: (card: BankCard) => void
@@ -68,12 +72,16 @@ export const useBankStore = create<BankState>()(
 
       registrationDraft: null,
 
+      securityPinHash: null,
+
       setAuthenticated: (value, remember) =>
         set((state) => ({ isAuthenticated: value, rememberMe: remember ?? state.rememberMe })),
 
       setParent: (patch) => set((state) => ({ parent: { ...state.parent, ...patch } })),
 
       setRegistrationDraft: (draft) => set({ registrationDraft: draft }),
+
+      setSecurityPinHash: (hash) => set({ securityPinHash: hash }),
 
       addKidRecord: (kid) => set((state) => ({ kids: [...state.kids, kid] })),
 

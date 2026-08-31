@@ -3,6 +3,7 @@
 import { ChevronRight, CreditCard, LineChart, PiggyBank, Send, Wallet } from 'lucide-react'
 import Link from 'next/link'
 import { AvatarCircle } from '@/components/ui/avatar-circle'
+import { AccountCardDetails } from '@/components/banking/AccountCardDetails'
 import { BalanceCard } from '@/components/accounts/BalanceCard'
 import { KidCard } from '@/components/accounts/KidCard'
 import { EmptyState } from '@/components/ui/empty-state'
@@ -32,6 +33,8 @@ export default function PersonalPage() {
       </div>
 
       <BalanceCard label="Available balance" balance={parent.balance} subtitle="Personal Parent Account" />
+
+      <AccountCardDetails parent={parent} />
 
       <div className="grid grid-cols-4 gap-3">
         <QuickAction href="/kids" icon={PiggyBank} label="Kids" />

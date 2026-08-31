@@ -3,6 +3,7 @@ import {
   CheckCheck,
   Lock,
   LogIn,
+  Eye,
   Mail,
   PiggyBank,
   ShieldAlert,
@@ -35,6 +36,7 @@ export const notificationIcon: Record<NotificationType, LucideIcon> = {
   account_closure_requested: ShieldAlert,
   account_closure_cancelled: ShieldCheck,
   account_closed: Ban,
+  card_details_viewed: Eye,
 }
 
 export const notificationLevel: Record<NotificationType, NotificationLevel> = {
@@ -54,6 +56,7 @@ export const notificationLevel: Record<NotificationType, NotificationLevel> = {
   account_closure_requested: 'WARNING',
   account_closure_cancelled: 'INFO',
   account_closed: 'WARNING',
+  card_details_viewed: 'SECURITY',
 }
 
 // Tailwind classes keyed by level, not type — the icon carries the specific
