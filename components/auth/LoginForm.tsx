@@ -15,7 +15,7 @@ export function LoginForm() {
   const router = useRouter()
   const { login } = useAuth()
 
-  const [identifier, setIdentifier] = useState('olivia.b')
+  const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [remember, setRemember] = useState(true)
@@ -56,7 +56,7 @@ export function LoginForm() {
             id="identifier"
             value={identifier}
             onChange={(e) => setIdentifier(e.target.value)}
-            placeholder="olivia.b"
+            placeholder="Username or email"
             className="h-11"
             autoComplete="username"
             required
@@ -107,10 +107,6 @@ export function LoginForm() {
         <Link href="/register" className="font-medium text-primary hover:underline">
           Create an account
         </Link>
-      </p>
-
-      <p className="mt-4 rounded-lg bg-muted px-3 py-2 text-center text-xs text-muted-foreground">
-        Prototype login — use <span className="font-medium text-foreground">olivia.b</span> and any password (4+ characters).
       </p>
     </>
   )
