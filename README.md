@@ -1,76 +1,156 @@
-# React + TypeScript + Vite
+# Piggy Bank Mobile Banking App
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A premium family banking application for parents and kids, built with **Next.js, TypeScript, Tailwind CSS, PostCSS, shadcn/ui, Lucide React, Motion for React and Capacitor**.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+* Login / Logout
+* Create Account
+* Email or SMS PIN verification
+* Forgot Password
+* Parent Personal Account
+* Kids Accounts
+* Parent → Kid transfers
+* Kid → Parent transfers with permission
+* Account balances
+* Transaction history
+* Kids bank cards
+* Freeze / Unfreeze cards
+* Lock / Unlock accounts
+* Notifications
+* Monthly analytics graph
+* Avatar upload
+* Responsive Mobile / Tablet / Desktop UI
+* Cookie consent management
 
-## React Compiler
+## Tech Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+```text
+Next.js
+TypeScript
+Tailwind CSS
+PostCSS
+shadcn/ui
+Lucide React
+Motion for React
+Capacitor
+PostgreSQL
+Prisma
 ```
 
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
+> **Status note:** the UI, mocked data layer, and Capacitor packaging are built.
+> PostgreSQL + Prisma (and the real-time API layer) are the planned backend and
+> are not wired up yet — see [Status](#status).
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Getting Started
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+Install dependencies:
 
+```bash
+npm install
 ```
-# Piggy-Bank
+
+Create environment variables:
+
+```bash
+cp .env.example .env.local
+```
+
+Run development server:
+
+```bash
+npm run dev
+```
+
+Open:
+
+```text
+http://localhost:3000
+```
+
+## Project Structure
+
+```text
+app/
+components/
+hooks/
+services/
+lib/
+store/
+types/
+styles/
+public/
+android/
+ios/
+```
+
+## Environment Variables
+
+Never commit real secrets.
+
+`.env.example` documents every required variable with safe placeholder values only — copy it to `.env.local` (or `.env`) and fill in real values there. `.env.local`/`.env` are gitignored; `.env.example` is committed. A representative excerpt:
+
+```env
+DATABASE_URL=
+AUTH_SECRET=
+NEXT_PUBLIC_APP_URL=
+EMAIL_PROVIDER_API_KEY=
+SMS_AUTH_TOKEN=
+REALTIME_URL=
+```
+
+See [`.env.example`](.env.example) for the full list.
+
+## Scripts
+
+```bash
+npm run dev
+npm run build
+npm run start
+npm run lint
+npm run cap:sync
+```
+
+## Mobile App
+
+Capacitor is used for iOS and Android packaging.
+
+```bash
+npx cap sync
+npx cap open ios
+npx cap open android
+```
+
+## UI / UX
+
+The design should use:
+
+* Premium UK banking style
+* Deep blue primary colour
+* White and soft-neutral backgrounds
+* Rounded cards
+* Subtle shadows
+* Responsive layouts
+* Lucide icons
+* Smooth Motion animations
+* Accessible controls
+
+## Security
+
+Sensitive actions must be validated server-side.
+
+Do not trust client-side values for:
+
+* Balances
+* Transfers
+* PIN verification
+* Card status
+* Account permissions
+
+## Status
+
+This project is under active development.
+
+## License
+
+Private project. All rights reserved.
