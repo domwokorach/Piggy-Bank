@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 import { getAuthenticatedUser, logAccountEvent, revokeAllSessionsForUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { clearSessionCookie } from '@/lib/session'
+import { clearLoginSessionCookie } from '@/lib/session'
+import { createClient } from '@/lib/supabase/server'
 import { sendAccountClosedEmail } from '@/lib/email'
 
 const VERIFIED_CONFIRM_WINDOW_MS = 10 * 60 * 1000
@@ -26,10 +27,10 @@ export async function POST() {
   }
 
   // NOTE: Kids Accounts, cards, and transfers are not yet backed by Postgres
-  // (still mocked client-side) — this closure only affects the parent User
-  // record. Freezing linked cards / handling Kids Accounts per policy still
-  // needs to be wired up once those move off the mock store.
-  await prisma.user.update({
+  // (still mocked client-side) — this closure only affects the parent
+  // Profile record. Freezing linked cards / handling Kids Accounts per
+  // policy still needs to be wired up once those move off the mock store.
+  await prisma.profile.update({
     where: { id: user.id },
     data: {
       status: 'CLOSED',
@@ -44,7 +45,9 @@ export async function POST() {
 
   await revokeAllSessionsForUser(user.id)
   await logAccountEvent(user.id, 'account_closed')
-  await clearSessionCookie()
+  await clearLoginSessionCookie()
+  const supabase = await createClient()
+  await supabase.auth.signOut()
 
   try {
     await sendAccountClosedEmail(user.email, user.firstName)

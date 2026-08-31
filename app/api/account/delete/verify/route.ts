@@ -34,11 +34,11 @@ export async function POST(request: Request) {
 
   const matches = await verifyPinHash(pin, user.deletionPinHash)
   if (!matches) {
-    await prisma.user.update({ where: { id: user.id }, data: { deletionAttempts: { increment: 1 } } })
+    await prisma.profile.update({ where: { id: user.id }, data: { deletionAttempts: { increment: 1 } } })
     return NextResponse.json({ ok: false, error: 'Incorrect code. Please check your email and try again.' }, { status: 400 })
   }
 
-  await prisma.user.update({
+  await prisma.profile.update({
     where: { id: user.id },
     data: {
       deletionPinHash: null,

@@ -9,13 +9,15 @@ export const NEW_DEVICE_ALERT_THROTTLE_MS = 15 * 60 * 1000
 export async function isRateLimited(ip: string): Promise<boolean> {
   if (ip === 'unknown') return false
   const since = new Date(Date.now() - FAILED_ATTEMPT_WINDOW_MS)
-  const count = await prisma.loginEvent.count({ where: { ip, status: 'FAILED', createdAt: { gte: since } } })
+  const count = await prisma.securityEvent.count({
+    where: { ip, type: 'login_failed', createdAt: { gte: since } },
+  })
   return count >= MAX_FAILED_ATTEMPTS
 }
 
-export function recordFailedLogin(ip: string, userId: string | null, userAgent: string | null) {
-  return prisma.loginEvent.create({
-    data: { userId, ip, userAgent, status: 'FAILED' },
+export function recordFailedLogin(ip: string, profileId: string | null, userAgent: string | null) {
+  return prisma.securityEvent.create({
+    data: { profileId: profileId ?? undefined, ip, userAgent, type: 'login_failed', status: 'FAILED' },
   })
 }
 
@@ -28,7 +30,7 @@ export interface ResolvedDevice {
 }
 
 export async function resolveDevice(
-  userId: string,
+  profileId: string,
   deviceCookieId: string,
   userAgent: string | null,
   native?: NativeDeviceInfo,
@@ -36,7 +38,7 @@ export async function resolveDevice(
   const parsed = parseDevice(userAgent, native)
 
   const existing = await prisma.device.findUnique({
-    where: { userId_deviceId: { userId, deviceId: deviceCookieId } },
+    where: { profileId_deviceId: { profileId, deviceId: deviceCookieId } },
   })
 
   if (existing) {
@@ -46,7 +48,7 @@ export async function resolveDevice(
 
   const created = await prisma.device.create({
     data: {
-      userId,
+      profileId,
       deviceId: deviceCookieId,
       label: parsed.label,
       deviceType: parsed.deviceType,
@@ -60,7 +62,7 @@ export async function resolveDevice(
 
 export async function recentlyAlertedForDevice(deviceRowId: string): Promise<boolean> {
   const since = new Date(Date.now() - NEW_DEVICE_ALERT_THROTTLE_MS)
-  const count = await prisma.loginEvent.count({
+  const count = await prisma.securityEvent.count({
     where: { deviceRowId, isNewDevice: true, createdAt: { gte: since } },
   })
   return count > 0

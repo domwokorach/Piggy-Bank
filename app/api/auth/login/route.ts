@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
-import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
-import { createSessionForUser, toPublicProfile } from '@/lib/auth'
+import { createClient } from '@/lib/supabase/server'
+import { createLoginSessionForUser, toPublicProfile } from '@/lib/auth'
 import { getOrCreateDeviceCookie } from '@/lib/device-cookie'
 import { getApproximateLocation } from '@/lib/geolocation'
 import { isRateLimited, recentlyAlertedForDevice, recordFailedLogin, resolveDevice } from '@/lib/login-security'
@@ -29,30 +29,39 @@ export async function POST(request: Request) {
   }
 
   const trimmed = String(identifier).trim()
-  const user = await prisma.user.findFirst({
+
+  // Supabase Auth signs in by email only — resolve a username to its email first.
+  const candidate = await prisma.profile.findFirst({
     where: { OR: [{ email: trimmed.toLowerCase() }, { username: { equals: trimmed, mode: 'insensitive' } }] },
   })
 
-  if (!user) {
+  if (!candidate) {
     await recordFailedLogin(ip, null, userAgent)
     return NextResponse.json({ ok: false, error: 'We could not find an account with those details.' }, { status: 401 })
   }
 
-  const matches = await bcrypt.compare(password, user.passwordHash)
-  if (!matches) {
-    await recordFailedLogin(ip, user.id, userAgent)
+  const supabase = await createClient()
+  const { data, error } = await supabase.auth.signInWithPassword({ email: candidate.email, password })
+
+  if (error || !data.user) {
+    await recordFailedLogin(ip, candidate.id, userAgent)
     return NextResponse.json({ ok: false, error: 'Incorrect password. Please try again.' }, { status: 401 })
   }
 
-  if (user.status === 'CLOSED') {
+  const profile = candidate
+
+  if (profile.status === 'CLOSED') {
+    await supabase.auth.signOut()
     return NextResponse.json({ ok: false, error: 'This account has been closed.' }, { status: 403 })
   }
 
-  if (!user.emailVerified) {
+  if (profile.status === 'PENDING') {
+    await supabase.auth.signOut()
     return NextResponse.json({ ok: false, error: 'Please verify your email before logging in.' }, { status: 403 })
   }
 
-  if (user.mustResetPassword) {
+  if (profile.mustResetPassword) {
+    await supabase.auth.signOut()
     return NextResponse.json(
       { ok: false, error: 'For your security, please reset your password before logging in.', code: 'RESET_REQUIRED' },
       { status: 403 },
@@ -62,7 +71,7 @@ export async function POST(request: Request) {
   const deviceCookieId = await getOrCreateDeviceCookie()
   const native: NativeDeviceInfo | undefined =
     nativeDevice && typeof nativeDevice === 'object' ? (nativeDevice as NativeDeviceInfo) : undefined
-  const { device, isNewDevice, isSuspicious } = await resolveDevice(user.id, deviceCookieId, userAgent, native)
+  const { device, isNewDevice, isSuspicious } = await resolveDevice(profile.id, deviceCookieId, userAgent, native)
   const location = await getApproximateLocation(ip)
 
   await prisma.device.update({
@@ -70,14 +79,19 @@ export async function POST(request: Request) {
     data: { lastIp: ip, lastCity: location.city, lastCountry: location.country, lastActiveAt: new Date() },
   })
 
-  const sessionId = await createSessionForUser(user.id, { deviceRowId: device.id, ip, userAgent: userAgent ?? undefined })
-  await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } })
+  const sessionId = await createLoginSessionForUser(profile.id, {
+    deviceRowId: device.id,
+    ip,
+    userAgent: userAgent ?? undefined,
+  })
+  await prisma.profile.update({ where: { id: profile.id }, data: { lastLoginAt: new Date() } })
 
-  const loginEvent = await prisma.loginEvent.create({
+  const securityEvent = await prisma.securityEvent.create({
     data: {
-      userId: user.id,
+      profileId: profile.id,
       deviceRowId: device.id,
       sessionId,
+      type: 'login_success',
       status: 'SUCCESS',
       isNewDevice,
       ip,
@@ -90,19 +104,21 @@ export async function POST(request: Request) {
     },
   })
 
-  let security: {
-    isSuspicious: boolean
-    deviceLabel: string
-    location: string
-    dateTime: string
-    confirmUrl: string
-    blockUrl: string
-  } | undefined
+  let security:
+    | {
+        isSuspicious: boolean
+        deviceLabel: string
+        location: string
+        dateTime: string
+        confirmUrl: string
+        blockUrl: string
+      }
+    | undefined
 
   if (isNewDevice) {
     const now = new Date()
-    const confirmToken = await signLoginConfirmToken(loginEvent.id, 'confirm')
-    const blockToken = await signLoginConfirmToken(loginEvent.id, 'block')
+    const confirmToken = await signLoginConfirmToken(securityEvent.id, 'confirm')
+    const blockToken = await signLoginConfirmToken(securityEvent.id, 'block')
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? new URL(request.url).origin
     const confirmUrl = `${baseUrl}/api/security/confirm-login?token=${confirmToken}`
     const blockUrl = `${baseUrl}/api/security/confirm-login?token=${blockToken}`
@@ -121,8 +137,8 @@ export async function POST(request: Request) {
     if (!(await recentlyAlertedForDevice(device.id))) {
       try {
         await sendNewLoginAlertEmail(
-          user.email,
-          user.firstName,
+          profile.email,
+          profile.firstName,
           {
             date: formatDate(now.toISOString()),
             time: formatTime(now.toISOString()),
@@ -135,11 +151,11 @@ export async function POST(request: Request) {
           confirmUrl,
           blockUrl,
         )
-      } catch (error) {
-        console.error('[login] failed to send new login alert email', error)
+      } catch (err) {
+        console.error('[login] failed to send new login alert email', err)
       }
     }
   }
 
-  return NextResponse.json({ ok: true, parent: toPublicProfile(user), security })
+  return NextResponse.json({ ok: true, parent: toPublicProfile(profile), security })
 }

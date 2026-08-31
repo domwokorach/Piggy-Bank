@@ -1,66 +1,98 @@
+import { decodeJwt } from 'jose'
 import { prisma } from '@/lib/prisma'
-import { clearSessionCookie, readSession, setSessionCookie, signSessionToken, type Session } from '@/lib/session'
-import type { Prisma, Session as SessionRow, User } from '@/prisma/generated/client'
+import { createClient } from '@/lib/supabase/server'
+import { clearLoginSessionCookie, readLoginSessionId, setLoginSessionCookie, type Session } from '@/lib/session'
+import type { LoginSession as LoginSessionRow, Prisma, Profile } from '@/prisma/generated/client'
 
-export async function getAuthenticatedUser(): Promise<{ user: User; session: Session; sessionRow: SessionRow } | null> {
-  const session = await readSession()
-  if (!session) return null
+export async function getAuthenticatedUser(): Promise<{
+  user: Profile
+  session: Session
+  sessionRow: LoginSessionRow
+} | null> {
+  const supabase = await createClient()
+  const {
+    data: { user: supabaseUser },
+  } = await supabase.auth.getUser()
+  if (!supabaseUser) return null
 
-  const sessionRow = await prisma.session.findUnique({ where: { id: session.sessionId } })
-  if (!sessionRow || sessionRow.revokedAt || sessionRow.userId !== session.userId) return null
+  const {
+    data: { session: supabaseSession },
+  } = await supabase.auth.getSession()
+  if (!supabaseSession) return null
 
-  const user = await prisma.user.findUnique({ where: { id: session.userId } })
-  if (!user) return null
+  const profile = await prisma.profile.findUnique({ where: { id: supabaseUser.id } })
+  if (!profile) return null
 
-  return { user, session, sessionRow }
+  const loginSessionId = await readLoginSessionId()
+  if (!loginSessionId) return null
+
+  const sessionRow = await prisma.loginSession.findUnique({ where: { id: loginSessionId } })
+  if (!sessionRow || sessionRow.revokedAt || sessionRow.profileId !== profile.id) return null
+
+  const { iat } = decodeJwt(supabaseSession.access_token)
+  const session: Session = { userId: profile.id, sessionId: sessionRow.id, issuedAt: iat ?? 0 }
+
+  return { user: profile, session, sessionRow }
 }
 
-export async function createSessionForUser(
-  userId: string,
+export async function createLoginSessionForUser(
+  profileId: string,
   options: { deviceRowId?: string; ip?: string; userAgent?: string } = {},
 ): Promise<string> {
-  const sessionRow = await prisma.session.create({
-    data: { userId, deviceRowId: options.deviceRowId, ip: options.ip, userAgent: options.userAgent },
+  const sessionRow = await prisma.loginSession.create({
+    data: { profileId, deviceRowId: options.deviceRowId, ip: options.ip, userAgent: options.userAgent },
   })
-  const token = await signSessionToken(userId, sessionRow.id)
-  await setSessionCookie(token)
+  await setLoginSessionCookie(sessionRow.id)
   return sessionRow.id
 }
 
 export async function revokeCurrentSession(): Promise<void> {
-  const session = await readSession()
-  if (session) {
-    await prisma.session.updateMany({ where: { id: session.sessionId }, data: { revokedAt: new Date() } })
+  const loginSessionId = await readLoginSessionId()
+  if (loginSessionId) {
+    await prisma.loginSession.updateMany({
+      where: { id: loginSessionId },
+      data: { revokedAt: new Date(), logoutAt: new Date(), logoutReason: 'user_logout' },
+    })
   }
-  await clearSessionCookie()
+  await clearLoginSessionCookie()
+
+  const supabase = await createClient()
+  await supabase.auth.signOut()
 }
 
-export async function revokeSession(sessionId: string): Promise<void> {
-  await prisma.session.updateMany({ where: { id: sessionId }, data: { revokedAt: new Date() } })
+export async function revokeSession(sessionId: string, reason = 'security_revoked'): Promise<void> {
+  await prisma.loginSession.updateMany({
+    where: { id: sessionId },
+    data: { revokedAt: new Date(), logoutAt: new Date(), logoutReason: reason },
+  })
 }
 
-export async function revokeAllSessionsForUser(userId: string, exceptSessionId?: string): Promise<void> {
-  await prisma.session.updateMany({
-    where: { userId, revokedAt: null, ...(exceptSessionId ? { id: { not: exceptSessionId } } : {}) },
-    data: { revokedAt: new Date() },
+export async function revokeAllSessionsForUser(profileId: string, exceptSessionId?: string): Promise<void> {
+  await prisma.loginSession.updateMany({
+    where: { profileId, revokedAt: null, ...(exceptSessionId ? { id: { not: exceptSessionId } } : {}) },
+    data: { revokedAt: new Date(), logoutAt: new Date(), logoutReason: 'security_revoked' },
   })
 }
 
 export async function revokeSessionsForDevice(deviceRowId: string): Promise<void> {
-  await prisma.session.updateMany({ where: { deviceRowId, revokedAt: null }, data: { revokedAt: new Date() } })
+  await prisma.loginSession.updateMany({
+    where: { deviceRowId, revokedAt: null },
+    data: { revokedAt: new Date(), logoutAt: new Date(), logoutReason: 'device_removed' },
+  })
 }
 
-export function logAccountEvent(userId: string, event: string, metadata?: Record<string, unknown>) {
-  return prisma.accountAuditLog.create({
-    data: { userId, event, metadata: metadata as Prisma.InputJsonValue },
+export function logAccountEvent(profileId: string, event: string, metadata?: Record<string, unknown>) {
+  return prisma.securityEvent.create({
+    data: { profileId, type: event, metadata: metadata as Prisma.InputJsonValue },
   })
 }
 
 export type ClientAccountStatus = 'pending' | 'active' | 'pending_closure' | 'closed'
 
-export function toClientStatus(user: Pick<User, 'emailVerified' | 'status'>): ClientAccountStatus {
-  if (!user.emailVerified) return 'pending'
-  switch (user.status) {
+export function toClientStatus(profile: Pick<Profile, 'status'>): ClientAccountStatus {
+  switch (profile.status) {
+    case 'PENDING':
+      return 'pending'
     case 'PENDING_CLOSURE':
       return 'pending_closure'
     case 'CLOSED':
@@ -70,16 +102,16 @@ export function toClientStatus(user: Pick<User, 'emailVerified' | 'status'>): Cl
   }
 }
 
-export function toPublicProfile(user: User) {
+export function toPublicProfile(profile: Profile) {
   return {
-    id: user.id,
-    firstName: user.firstName,
-    lastName: user.lastName,
-    dob: user.dob.toISOString().slice(0, 10),
-    mobile: user.mobile,
-    email: user.email,
-    username: user.username,
-    avatarUrl: user.avatarUrl ?? undefined,
-    status: toClientStatus(user),
+    id: profile.id,
+    firstName: profile.firstName,
+    lastName: profile.lastName,
+    dob: profile.dob.toISOString().slice(0, 10),
+    mobile: profile.mobile,
+    email: profile.email,
+    username: profile.username,
+    avatarUrl: profile.avatarUrl ?? undefined,
+    status: toClientStatus(profile),
   }
 }

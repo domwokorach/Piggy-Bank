@@ -14,7 +14,7 @@ export async function POST() {
     return NextResponse.json({ ok: false, error: 'No account closure is in progress.' }, { status: 400 })
   }
 
-  await prisma.user.update({
+  await prisma.profile.update({
     where: { id: user.id },
     data: {
       status: 'ACTIVE',

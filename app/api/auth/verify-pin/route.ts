@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { createClient } from '@/lib/supabase/server'
 import { isSixDigitPin } from '@/lib/validation'
-import { MAX_VERIFICATION_ATTEMPTS, verifyPinHash } from '@/lib/verification'
 
 export async function POST(request: Request) {
   const { email, pin } = (await request.json()) ?? {}
@@ -10,47 +10,25 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: 'Enter the 6-digit PIN from your email.' }, { status: 400 })
   }
 
-  const user = await prisma.user.findUnique({ where: { email: (email ?? '').toLowerCase() } })
-  if (!user) {
-    return NextResponse.json({ ok: false, error: 'We could not find that account.' }, { status: 404 })
-  }
-
-  if (user.emailVerified) {
-    return NextResponse.json({ ok: true })
-  }
-
-  if (!user.verificationPinHash || !user.verificationPinExpiresAt || user.verificationPinExpiresAt < new Date()) {
-    return NextResponse.json(
-      { ok: false, error: 'Your PIN has expired. Request a new one.' },
-      { status: 410 },
-    )
-  }
-
-  if (user.verificationAttempts >= MAX_VERIFICATION_ATTEMPTS) {
-    return NextResponse.json(
-      { ok: false, error: 'Too many incorrect attempts. Request a new PIN.' },
-      { status: 429 },
-    )
-  }
-
-  const matches = await verifyPinHash(pin, user.verificationPinHash)
-  if (!matches) {
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { verificationAttempts: { increment: 1 } },
-    })
-    return NextResponse.json({ ok: false, error: 'Incorrect PIN. Please check your email and try again.' }, { status: 400 })
-  }
-
-  await prisma.user.update({
-    where: { id: user.id },
-    data: {
-      emailVerified: true,
-      verificationPinHash: null,
-      verificationPinExpiresAt: null,
-      verificationAttempts: 0,
-    },
+  const supabase = await createClient()
+  const { data, error } = await supabase.auth.verifyOtp({
+    email: (email ?? '').toLowerCase(),
+    token: pin,
+    type: 'signup',
   })
+
+  if (error || !data.user) {
+    return NextResponse.json(
+      { ok: false, error: 'Incorrect or expired PIN. Please check your email and try again.' },
+      { status: 400 },
+    )
+  }
+
+  await prisma.profile.update({ where: { id: data.user.id }, data: { status: 'ACTIVE' } })
+
+  // verifyOtp signs the user in — this endpoint only confirms the email, it
+  // shouldn't leave them silently logged in ahead of the actual login step.
+  await supabase.auth.signOut()
 
   return NextResponse.json({ ok: true })
 }

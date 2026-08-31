@@ -31,7 +31,7 @@ export async function POST() {
   const pin = generatePin()
   const deletionPinHash = await hashPin(pin)
 
-  await prisma.user.update({
+  await prisma.profile.update({
     where: { id: user.id },
     data: {
       deletionPinHash,
