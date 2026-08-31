@@ -1,4 +1,6 @@
 import { Resend } from 'resend'
+import { formatCurrency, formatDate, formatTime } from '@/lib/utils'
+import type { PublicTransaction } from '@/lib/transactions'
 
 const resend = new Resend(process.env.EMAIL_PROVIDER_API_KEY)
 
@@ -37,6 +39,32 @@ export async function sendAccountDeletionPinEmail(to: string, firstName: string,
       <p>We received a request to close your Piggy Bank account. Enter this code to confirm:</p>
       <p style="font-size: 28px; font-weight: 600; letter-spacing: 0.3em;">${pin}</p>
       <p>This code expires in 10 minutes. If you didn't request this, please log in and cancel the closure request immediately, or contact support.</p>
+    `,
+  )
+}
+
+export async function sendTransactionReceiptEmail(
+  to: string,
+  firstName: string,
+  transaction: PublicTransaction,
+): Promise<void> {
+  await send(
+    to,
+    `Receipt: ${transaction.transactionNumber}`,
+    `
+      <p>Hi ${firstName},</p>
+      <p>Here's your receipt for a recent Piggy Bank transaction.</p>
+      <table style="border-collapse: collapse; margin-top: 12px;">
+        <tr><td style="padding: 4px 16px 4px 0; color: #666;">Transaction Number</td><td style="font-family: monospace; font-weight: 600;">${transaction.transactionNumber}</td></tr>
+        <tr><td style="padding: 4px 16px 4px 0; color: #666;">Date</td><td>${formatDate(transaction.createdAt)}</td></tr>
+        <tr><td style="padding: 4px 16px 4px 0; color: #666;">Time</td><td>${formatTime(transaction.createdAt)}</td></tr>
+        <tr><td style="padding: 4px 16px 4px 0; color: #666;">From</td><td>${transaction.fromLabel}</td></tr>
+        <tr><td style="padding: 4px 16px 4px 0; color: #666;">To</td><td>${transaction.toLabel}</td></tr>
+        <tr><td style="padding: 4px 16px 4px 0; color: #666;">Amount</td><td style="font-weight: 600;">${formatCurrency(transaction.amount)}</td></tr>
+        ${transaction.reference ? `<tr><td style="padding: 4px 16px 4px 0; color: #666;">Reference</td><td>${transaction.reference}</td></tr>` : ''}
+        <tr><td style="padding: 4px 16px 4px 0; color: #666;">Status</td><td>${transaction.status}</td></tr>
+      </table>
+      <p style="margin-top: 16px;">Keep this email as your record of the transaction.</p>
     `,
   )
 }

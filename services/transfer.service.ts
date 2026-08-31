@@ -1,11 +1,14 @@
 import { useBankStore } from '@/store/bank-store'
 import { generateId } from '@/lib/utils'
 import { isPositiveAmount } from '@/lib/validation'
+import { createTransaction } from './transaction.service'
 import { pushNotification } from './notification.service'
 import type { ServiceResult } from './types'
 import type { Transaction } from '@/types'
 
-export function transferParentToKid(kidId: string, amount: number, reference: string): ServiceResult {
+type TransferResult = ServiceResult & { transactionNumber?: string }
+
+export async function transferParentToKid(kidId: string, amount: number, reference: string): Promise<TransferResult> {
   const { parent, kids, updateKid, setParent, addTransactions } = useBankStore.getState()
 
   if (!isPositiveAmount(amount)) {
@@ -19,7 +22,21 @@ export function transferParentToKid(kidId: string, amount: number, reference: st
   const kid = kids.find((k) => k.id === kidId)
   if (!kid) return { ok: false, error: 'Kid account not found.' }
 
-  const now = new Date().toISOString()
+  const result = await createTransaction({
+    type: 'payment',
+    amount,
+    fromLabel: 'Parent Account',
+    toLabel: kid.name,
+    fromAccountId: parent.id,
+    toAccountId: kidId,
+    reference,
+  })
+  if (!result.ok) {
+    pushNotification('transfer_failed', 'Transfer failed', `Payment of £${amount.toFixed(2)} to ${kid.name} could not be completed.`)
+    return { ok: false, error: result.error }
+  }
+
+  const { transactionNumber, status, createdAt } = result.transaction
   const newKidBalance = +(kid.balance + amount).toFixed(2)
 
   setParent({ balance: +(parent.balance - amount).toFixed(2) })
@@ -37,7 +54,9 @@ export function transferParentToKid(kidId: string, amount: number, reference: st
       amount,
       counterparty: kid.name,
       reference,
-      date: now,
+      date: createdAt,
+      transactionNumber,
+      status,
     },
     {
       id: generateId('txn'),
@@ -47,12 +66,18 @@ export function transferParentToKid(kidId: string, amount: number, reference: st
       amount,
       counterparty: 'Parent Account',
       reference,
-      date: now,
+      date: createdAt,
+      transactionNumber,
+      status,
     },
   ]
   addTransactions(transactions)
 
-  pushNotification('payment_received', 'Payment received', `${kid.name} received £${amount.toFixed(2)} from your Parent Account.`)
+  pushNotification(
+    'payment_received',
+    'Payment received',
+    `${kid.name} received £${amount.toFixed(2)} from your Parent Account. Ref: ${transactionNumber}`,
+  )
 
   if (newKidBalance >= kid.savingsTarget && kid.savingsProgress < kid.savingsTarget) {
     pushNotification(
@@ -62,10 +87,10 @@ export function transferParentToKid(kidId: string, amount: number, reference: st
     )
   }
 
-  return { ok: true }
+  return { ok: true, transactionNumber }
 }
 
-export function transferKidToParent(kidId: string, amount: number, reference: string): ServiceResult {
+export async function transferKidToParent(kidId: string, amount: number, reference: string): Promise<TransferResult> {
   const { parent, kids, updateKid, setParent, addTransactions } = useBankStore.getState()
 
   const kid = kids.find((k) => k.id === kidId)
@@ -83,7 +108,21 @@ export function transferKidToParent(kidId: string, amount: number, reference: st
     return { ok: false, error: `This exceeds ${kid.name}'s available balance.` }
   }
 
-  const now = new Date().toISOString()
+  const result = await createTransaction({
+    type: 'transfer',
+    amount,
+    fromLabel: kid.name,
+    toLabel: 'Parent Account',
+    fromAccountId: kidId,
+    toAccountId: parent.id,
+    reference,
+  })
+  if (!result.ok) {
+    pushNotification('transfer_failed', 'Transfer failed', `Transfer of £${amount.toFixed(2)} from ${kid.name} could not be completed.`)
+    return { ok: false, error: result.error }
+  }
+
+  const { transactionNumber, status, createdAt } = result.transaction
   const newKidBalance = +(kid.balance - amount).toFixed(2)
 
   setParent({ balance: +(parent.balance + amount).toFixed(2) })
@@ -101,7 +140,9 @@ export function transferKidToParent(kidId: string, amount: number, reference: st
       amount,
       counterparty: kid.name,
       reference,
-      date: now,
+      date: createdAt,
+      transactionNumber,
+      status,
     },
     {
       id: generateId('txn'),
@@ -111,12 +152,18 @@ export function transferKidToParent(kidId: string, amount: number, reference: st
       amount,
       counterparty: 'Parent Account',
       reference,
-      date: now,
+      date: createdAt,
+      transactionNumber,
+      status,
     },
   ]
   addTransactions(transactions)
 
-  pushNotification('transfer_completed', 'Transfer completed', `${kid.name} sent £${amount.toFixed(2)} back to the Parent Account.`)
+  pushNotification(
+    'transfer_completed',
+    'Transfer completed',
+    `${kid.name} sent £${amount.toFixed(2)} back to the Parent Account. Ref: ${transactionNumber}`,
+  )
 
-  return { ok: true }
+  return { ok: true, transactionNumber }
 }

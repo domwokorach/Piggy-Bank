@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { AlertCircle, Check, ChevronRight } from 'lucide-react'
+import { AlertCircle, Check, ChevronRight, Copy, CopyCheck } from 'lucide-react'
 import { motion } from 'motion/react'
 import Link from 'next/link'
 import { AvatarCircle } from '@/components/ui/avatar-circle'
@@ -35,6 +35,8 @@ export function TransferForm({ mode = 'full', initialKidId, initialDirection = '
   const [step, setStep] = useState<Step>(mode === 'quick' && !initialKidId ? 'select' : 'form')
   const [error, setError] = useState<string | null>(null)
   const [processing, setProcessing] = useState(false)
+  const [transactionNumber, setTransactionNumber] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
 
   const kid = kids.find((k) => k.id === kidId)
   const amountNumber = Number(amount)
@@ -64,20 +66,36 @@ export function TransferForm({ mode = 'full', initialKidId, initialDirection = '
     setStep('review')
   }
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (!kid) return
     setProcessing(true)
-    setTimeout(() => {
+    try {
       const action = direction === 'parentToKid' ? transferParentToKid : transferKidToParent
-      const result = action(kid.id, amountNumber, reference || (mode === 'quick' ? 'Payment from Parent' : 'Family transfer'))
-      setProcessing(false)
+      const result = await action(kid.id, amountNumber, reference || (mode === 'quick' ? 'Payment from Parent' : 'Family transfer'))
       if (!result.ok) {
         setError(result.error ?? 'Transfer failed. Please try again.')
         setStep('form')
         return
       }
+      setTransactionNumber(result.transactionNumber ?? null)
       setStep('success')
-    }, 700)
+    } catch {
+      setError('Transfer failed. Please try again.')
+      setStep('form')
+    } finally {
+      setProcessing(false)
+    }
+  }
+
+  const handleCopyReference = async () => {
+    if (!transactionNumber) return
+    try {
+      await navigator.clipboard.writeText(transactionNumber)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      // clipboard access denied — silently ignore, the number is still shown on screen
+    }
   }
 
   const reset = () => {
@@ -86,6 +104,8 @@ export function TransferForm({ mode = 'full', initialKidId, initialDirection = '
     setAmount('')
     setReference('')
     setError(null)
+    setTransactionNumber(null)
+    setCopied(false)
   }
 
   if (step === 'success' && kid) {
@@ -101,18 +121,43 @@ export function TransferForm({ mode = 'full', initialKidId, initialDirection = '
         </motion.div>
         <div>
           <h1 className="text-xl font-semibold tracking-tight text-foreground">
-            {mode === 'quick' ? 'Payment sent' : 'Transfer complete'}
+            {mode === 'quick' ? 'Payment Successful' : 'Transfer Successful'}
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            {formatCurrency(amountNumber)} moved from {fromLabel} to {toLabel}.
+            {formatCurrency(amountNumber)} was sent to {toLabel}.
           </p>
         </div>
+
+        {transactionNumber && (
+          <div className="rounded-xl border border-border bg-muted px-4 py-3 text-left">
+            <p className="text-xs text-muted-foreground">Transaction Number</p>
+            <div className="mt-1 flex items-center justify-between gap-2">
+              <p className="truncate font-mono text-sm font-semibold text-foreground">{transactionNumber}</p>
+              <button
+                type="button"
+                onClick={handleCopyReference}
+                className="flex shrink-0 items-center gap-1 text-xs font-medium text-primary hover:underline"
+              >
+                {copied ? <CopyCheck className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                {copied ? 'Copied' : 'Copy Reference'}
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="flex flex-col gap-2">
-          <Button render={<Link href={`/kids/${kid.id}`} />} nativeButton={false} className="h-11">
-            View {kid.name.split(' ')[0]}&apos;s account
-          </Button>
-          <Button variant="outline" className="h-11" onClick={reset}>
-            {mode === 'quick' ? 'Send another payment' : 'Make another transfer'}
+          {transactionNumber && (
+            <Button
+              variant="outline"
+              className="h-11"
+              render={<Link href={`/transactions/${transactionNumber}`} />}
+              nativeButton={false}
+            >
+              View Transaction
+            </Button>
+          )}
+          <Button className="h-11" onClick={reset}>
+            Done
           </Button>
         </div>
       </div>

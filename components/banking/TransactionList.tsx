@@ -1,5 +1,6 @@
 import { createElement } from 'react'
 import { ArrowDownLeft, ArrowUpRight, PiggyBank, ShoppingBag, Wallet } from 'lucide-react'
+import Link from 'next/link'
 import { EmptyState } from '@/components/ui/empty-state'
 import { cn, formatCurrency, formatDate } from '@/lib/utils'
 import type { Transaction } from '@/types'
@@ -15,7 +16,10 @@ function TransactionRow({ transaction }: { transaction: Transaction }) {
   const icon = iconFor(transaction)
 
   return (
-    <div className="flex items-center gap-3 py-3">
+    <Link
+      href={`/transactions/${transaction.transactionNumber}`}
+      className="flex items-center gap-3 py-3 transition-colors hover:bg-muted"
+    >
       <div
         className={cn(
           'flex h-11 w-11 shrink-0 items-center justify-center rounded-full',
@@ -26,9 +30,7 @@ function TransactionRow({ transaction }: { transaction: Transaction }) {
       </div>
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium text-foreground">{transaction.counterparty}</p>
-        <p className="truncate text-xs text-muted-foreground">
-          {transaction.reference ?? transaction.category ?? formatDate(transaction.date)}
-        </p>
+        <p className="truncate font-mono text-xs text-muted-foreground">{transaction.transactionNumber}</p>
       </div>
       <div className="text-right shrink-0">
         <p className={cn('text-sm font-semibold', isIn ? 'text-success' : 'text-foreground')}>
@@ -37,7 +39,7 @@ function TransactionRow({ transaction }: { transaction: Transaction }) {
         </p>
         <p className="text-xs text-muted-foreground">{formatDate(transaction.date)}</p>
       </div>
-    </div>
+    </Link>
   )
 }
 

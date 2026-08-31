@@ -60,3 +60,50 @@ model AccountAuditLog {
   @@index([userId])
   @@map("account_audit_logs")
 }
+
+enum TransactionType {
+  PAYMENT
+  TRANSFER
+  DEPOSIT
+  SPEND
+  SAVINGS
+}
+
+enum TransactionStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+  REVERSED
+}
+
+model Transaction {
+  id                String            @id @default(cuid())
+  // Public-facing reference, e.g. PB-20260831-8F3K2A. Never expose `id` above to clients.
+  transactionNumber String            @unique
+
+  // Owning parent User — the family account this transaction belongs to.
+  userId String
+
+  type   TransactionType
+  status TransactionStatus @default(COMPLETED)
+
+  amount Float
+
+  // Kids/cards aren't backed by Postgres yet, so the counterparties are
+  // stored as display labels + loose (non-FK) ids rather than relations.
+  fromLabel     String
+  toLabel       String
+  fromAccountId String?
+  toAccountId   String?
+
+  reference String?
+  category  String?
+
+  createdAt   DateTime  @default(now())
+  completedAt DateTime?
+
+  @@index([userId])
+  @@map("transactions")
+}

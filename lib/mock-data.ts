@@ -13,6 +13,10 @@ const daysAgo = (n: number) => {
   return d.toISOString()
 }
 
+// Seed-only placeholder references — real transactions get their number from
+// the server (see lib/transaction-number.ts).
+const demoTxnNumber = (n: number) => `PB-DEMO-${n.toString().padStart(6, '0')}`
+
 export const seedParent: Parent = {
   id: 'parent-1',
   firstName: 'Olivia',
@@ -80,6 +84,8 @@ export const seedTransactions: Transaction[] = [
     counterparty: 'Freya Bennett',
     reference: 'Weekly allowance',
     date: daysAgo(1),
+    transactionNumber: demoTxnNumber(1),
+    status: 'completed',
   },
   {
     id: 'txn-2',
@@ -90,6 +96,8 @@ export const seedTransactions: Transaction[] = [
     counterparty: 'Salary',
     reference: 'Monthly salary',
     date: daysAgo(3),
+    transactionNumber: demoTxnNumber(2),
+    status: 'completed',
   },
   {
     id: 'txn-3',
@@ -100,6 +108,8 @@ export const seedTransactions: Transaction[] = [
     counterparty: 'Waitrose',
     category: 'Groceries',
     date: daysAgo(4),
+    transactionNumber: demoTxnNumber(3),
+    status: 'completed',
   },
   {
     id: 'txn-4',
@@ -110,6 +120,8 @@ export const seedTransactions: Transaction[] = [
     counterparty: 'Noah Bennett',
     reference: 'Pocket money',
     date: daysAgo(6),
+    transactionNumber: demoTxnNumber(4),
+    status: 'completed',
   },
   {
     id: 'txn-5',
@@ -120,6 +132,8 @@ export const seedTransactions: Transaction[] = [
     counterparty: 'Parent Account',
     reference: 'Weekly allowance',
     date: daysAgo(1),
+    transactionNumber: demoTxnNumber(1),
+    status: 'completed',
   },
   {
     id: 'txn-6',
@@ -130,6 +144,8 @@ export const seedTransactions: Transaction[] = [
     counterparty: 'Greggs',
     category: 'Food',
     date: daysAgo(2),
+    transactionNumber: demoTxnNumber(6),
+    status: 'completed',
   },
   {
     id: 'txn-7',
@@ -139,6 +155,8 @@ export const seedTransactions: Transaction[] = [
     amount: 10,
     counterparty: 'Savings pot',
     date: daysAgo(5),
+    transactionNumber: demoTxnNumber(7),
+    status: 'completed',
   },
   {
     id: 'txn-8',
@@ -149,6 +167,8 @@ export const seedTransactions: Transaction[] = [
     counterparty: 'Parent Account',
     reference: 'Pocket money',
     date: daysAgo(6),
+    transactionNumber: demoTxnNumber(4),
+    status: 'completed',
   },
   {
     id: 'txn-9',
@@ -159,6 +179,8 @@ export const seedTransactions: Transaction[] = [
     counterparty: 'App Store',
     category: 'Entertainment',
     date: daysAgo(7),
+    transactionNumber: demoTxnNumber(9),
+    status: 'completed',
   },
 ]
 
