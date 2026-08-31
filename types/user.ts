@@ -1,4 +1,4 @@
-export type AccountStatus = 'pending' | 'active'
+export type AccountStatus = 'pending' | 'active' | 'pending_closure' | 'closed'
 
 export interface Parent {
   id: string

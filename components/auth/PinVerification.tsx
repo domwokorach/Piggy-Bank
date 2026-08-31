@@ -60,8 +60,8 @@ export function PinVerification() {
     }
   }
 
-  const handleContinue = () => {
-    login(registrationDraft.username, registrationDraft.password, true)
+  const handleContinue = async () => {
+    await login(registrationDraft.username, registrationDraft.password, true)
     router.push('/personal')
   }
 

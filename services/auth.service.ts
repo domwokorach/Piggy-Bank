@@ -2,35 +2,34 @@ import { useBankStore } from '@/store/bank-store'
 import { validateRegistration } from '@/lib/validation'
 import { pushNotification } from './notification.service'
 import type { ServiceResult } from './types'
-import type { RegistrationDraft } from '@/types'
+import type { Parent, RegistrationDraft } from '@/types'
 
 /**
- * Login is still mocked on the client for this prototype. Registration and
- * PIN verification are real — they call the Next.js API routes backed by
- * Prisma/Postgres and Resend (see app/api/auth/*).
+ * Login and registration call the Next.js API routes backed by
+ * Prisma/Postgres, Resend, and a signed session cookie (see app/api/auth/*).
  */
-export function login(identifier: string, password: string, remember: boolean): ServiceResult {
-  const { parent, setAuthenticated } = useBankStore.getState()
-
-  const matches =
-    identifier.trim().toLowerCase() === parent.username.toLowerCase() ||
-    identifier.trim().toLowerCase() === parent.email.toLowerCase()
-
-  if (!matches) {
-    return { ok: false, error: 'We could not find an account with those details.' }
-  }
-  if (password.length < 4) {
-    return { ok: false, error: 'Incorrect password. Please try again.' }
-  }
-  if (parent.status !== 'active') {
-    return { ok: false, error: 'Your account is still pending approval.' }
+export async function login(identifier: string, password: string, remember: boolean): Promise<ServiceResult> {
+  const response = await fetch('/api/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ identifier, password }),
+  })
+  const result: (ServiceResult & { parent?: Parent }) = await response.json()
+  if (!result.ok) {
+    return result
   }
 
+  const { setParent, setAuthenticated } = useBankStore.getState()
+  if (result.parent) {
+    setParent(result.parent)
+  }
   setAuthenticated(true, remember)
+
   return { ok: true }
 }
 
-export function logout(): void {
+export async function logout(): Promise<void> {
+  await fetch('/api/auth/logout', { method: 'POST' })
   useBankStore.getState().setAuthenticated(false)
 }
 

@@ -8,6 +8,9 @@ export type NotificationType =
   | 'account_approved'
   | 'pin_verification'
   | 'savings_target_reached'
+  | 'account_closure_requested'
+  | 'account_closure_cancelled'
+  | 'account_closed'
 
 export interface AppNotification {
   id: string

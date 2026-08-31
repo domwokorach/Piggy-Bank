@@ -7,25 +7,56 @@ generator client {
   output   = "./generated"
 }
 
+enum AccountStatus {
+  ACTIVE
+  PENDING_CLOSURE
+  CLOSED
+}
+
 model User {
-  id        String   @id @default(cuid())
-  firstName String
-  lastName  String
-  dob       DateTime
-  mobile    String
-  email     String   @unique
-  username  String   @unique
-  avatarUrl String?
+  id           String   @id @default(cuid())
+  firstName    String
+  lastName     String
+  dob          DateTime
+  mobile       String
+  email        String   @unique
+  username     String   @unique
+  avatarUrl    String?
   passwordHash String
 
-  emailVerified Boolean @default(false)
+  emailVerified Boolean       @default(false)
+  status        AccountStatus @default(ACTIVE)
+
+  // Bumped whenever all active sessions must be revoked (e.g. account closure).
+  // A session's JWT carries the version it was issued under; a mismatch invalidates it.
+  sessionVersion Int       @default(0)
+  lastLoginAt    DateTime?
 
   verificationPinHash      String?
   verificationPinExpiresAt DateTime?
   verificationAttempts     Int       @default(0)
 
+  deletionPinHash        String?
+  deletionPinExpiresAt   DateTime?
+  deletionAttempts       Int       @default(0)
+  deletionPinLastSentAt  DateTime?
+  deletionVerifiedAt     DateTime?
+  closureRequestedAt     DateTime?
+  closedAt               DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@map("users")
+}
+
+model AccountAuditLog {
+  id        String   @id @default(cuid())
+  userId    String
+  event     String
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("account_audit_logs")
 }

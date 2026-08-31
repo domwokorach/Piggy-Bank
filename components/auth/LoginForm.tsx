@@ -22,19 +22,22 @@ export function LoginForm() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     setError(null)
     setLoading(true)
-    setTimeout(() => {
-      const result = login(identifier, password, remember)
-      setLoading(false)
+    try {
+      const result = await login(identifier, password, remember)
       if (!result.ok) {
         setError(result.error ?? 'Something went wrong.')
         return
       }
       router.push('/personal')
-    }, 500)
+    } catch {
+      setError('Something went wrong. Please try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
