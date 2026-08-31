@@ -4,10 +4,6 @@ export function generateId(prefix: string): string {
   return `${prefix}-${Math.random().toString(36).slice(2, 10)}`
 }
 
-export function generatePin(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString()
-}
-
 export function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('en-GB', {
     style: 'currency',

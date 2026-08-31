@@ -17,7 +17,9 @@ export function PinVerification() {
   const [step, setStep] = useState<'verify' | 'approved'>('verify')
   const [pinInput, setPinInput] = useState('')
   const [error, setError] = useState<string | null>(null)
-  const [sentPin, setSentPin] = useState<string | null>(null)
+  const [resent, setResent] = useState(false)
+  const [verifying, setVerifying] = useState(false)
+  const [resending, setResending] = useState(false)
 
   useEffect(() => {
     if (!registrationDraft) {
@@ -27,18 +29,36 @@ export function PinVerification() {
 
   if (!registrationDraft) return null
 
-  const handleVerify = (e: FormEvent) => {
+  const handleVerify = async (e: FormEvent) => {
     e.preventDefault()
     setError(null)
-    const result = verifyPin(pinInput)
-    if (result.ok) {
-      setStep('approved')
-    } else {
-      setError(result.error ?? 'Incorrect PIN. Please try again.')
+    setVerifying(true)
+    try {
+      const result = await verifyPin(pinInput)
+      if (result.ok) {
+        setStep('approved')
+      } else {
+        setError(result.error ?? 'Incorrect PIN. Please try again.')
+      }
+    } catch {
+      setError('Something went wrong. Please try again.')
+    } finally {
+      setVerifying(false)
     }
   }
 
-  const handleResend = () => setSentPin(resendPin())
+  const handleResend = async () => {
+    setError(null)
+    setResending(true)
+    try {
+      await resendPin()
+      setResent(true)
+    } catch {
+      setError('Could not resend the PIN. Please try again.')
+    } finally {
+      setResending(false)
+    }
+  }
 
   const handleContinue = () => {
     login(registrationDraft.username, registrationDraft.password, true)
@@ -97,19 +117,20 @@ export function PinVerification() {
             required
           />
         </div>
-        <Button type="submit" className="h-11 w-full text-base">
-          Verify PIN
+        <Button type="submit" className="h-11 w-full text-base" disabled={verifying}>
+          {verifying ? 'Verifying…' : 'Verify PIN'}
         </Button>
         <button
           type="button"
           onClick={handleResend}
-          className="w-full text-center text-sm font-medium text-primary hover:underline"
+          disabled={resending}
+          className="w-full text-center text-sm font-medium text-primary hover:underline disabled:opacity-60"
         >
-          Resend PIN
+          {resending ? 'Resending…' : 'Resend PIN'}
         </button>
-        {sentPin && (
+        {resent && (
           <p className="rounded-lg bg-muted px-3 py-2 text-center text-xs text-muted-foreground">
-            Prototype mode — your PIN is <span className="font-semibold text-foreground">{sentPin}</span>
+            A new PIN has been sent to your email.
           </p>
         )}
       </form>

@@ -1,14 +1,13 @@
 import { useBankStore } from '@/store/bank-store'
-import { generatePin } from '@/lib/utils'
-import { isSixDigitPin, validateRegistration } from '@/lib/validation'
+import { validateRegistration } from '@/lib/validation'
 import { pushNotification } from './notification.service'
 import type { ServiceResult } from './types'
 import type { RegistrationDraft } from '@/types'
 
 /**
- * Auth is mocked entirely on the client for this prototype. In production
- * this module is where the real API/session calls would live — the
- * signatures below are already shaped for that swap.
+ * Login is still mocked on the client for this prototype. Registration and
+ * PIN verification are real — they call the Next.js API routes backed by
+ * Prisma/Postgres and Resend (see app/api/auth/*).
  */
 export function login(identifier: string, password: string, remember: boolean): ServiceResult {
   const { parent, setAuthenticated } = useBankStore.getState()
@@ -35,17 +34,24 @@ export function logout(): void {
   useBankStore.getState().setAuthenticated(false)
 }
 
-export function registerParent(draft: RegistrationDraft, confirmPassword: string): ServiceResult & { pin?: string } {
+export async function registerParent(draft: RegistrationDraft, confirmPassword: string): Promise<ServiceResult> {
   const validationError = validateRegistration({ ...draft, confirmPassword })
   if (validationError) {
     return { ok: false, error: validationError }
   }
 
-  const { setParent, setRegistrationDraft, setPendingPin } = useBankStore.getState()
-  const pin = generatePin()
+  const response = await fetch('/api/auth/register', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...draft, confirmPassword }),
+  })
+  const result: ServiceResult = await response.json()
+  if (!result.ok) {
+    return result
+  }
 
+  const { setParent, setRegistrationDraft } = useBankStore.getState()
   setRegistrationDraft(draft)
-  setPendingPin(pin)
   setParent({
     firstName: draft.firstName,
     lastName: draft.lastName,
@@ -57,31 +63,40 @@ export function registerParent(draft: RegistrationDraft, confirmPassword: string
     status: 'pending',
   })
 
-  // Mock email delivery — a real backend would send this via an email provider.
-  console.info(`[Piggy Bank] Verification PIN sent to ${draft.email}: ${pin}`)
-
-  return { ok: true, pin }
+  return { ok: true }
 }
 
-export function resendPin(): string {
-  const pin = generatePin()
-  useBankStore.getState().setPendingPin(pin)
-  console.info(`[Piggy Bank] Verification PIN resent: ${pin}`)
-  return pin
-}
-
-export function verifyPin(pin: string): ServiceResult {
-  if (!isSixDigitPin(pin)) {
-    return { ok: false, error: 'Enter the 6-digit PIN from your email.' }
+export async function resendPin(): Promise<ServiceResult> {
+  const { registrationDraft } = useBankStore.getState()
+  if (!registrationDraft) {
+    return { ok: false, error: 'Start your registration again.' }
   }
 
-  const { pendingPin, parent, setParent, setPendingPin } = useBankStore.getState()
-  if (pin !== pendingPin) {
-    return { ok: false, error: 'Incorrect PIN. Please check your email and try again.' }
+  const response = await fetch('/api/auth/resend-pin', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: registrationDraft.email }),
+  })
+  return response.json()
+}
+
+export async function verifyPin(pin: string): Promise<ServiceResult> {
+  const { registrationDraft, parent, setParent } = useBankStore.getState()
+  if (!registrationDraft) {
+    return { ok: false, error: 'Start your registration again.' }
+  }
+
+  const response = await fetch('/api/auth/verify-pin', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: registrationDraft.email, pin }),
+  })
+  const result: ServiceResult = await response.json()
+  if (!result.ok) {
+    return result
   }
 
   setParent({ status: 'active' })
-  setPendingPin(null)
 
   pushNotification(
     'account_approved',

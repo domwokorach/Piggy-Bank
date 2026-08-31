@@ -8,7 +8,6 @@ import type { RegistrationDraft } from '@/types'
 export function useAuth() {
   const isAuthenticated = useBankStore((s) => s.isAuthenticated)
   const parent = useBankStore((s) => s.parent)
-  const pendingPin = useBankStore((s) => s.pendingPin)
   const registrationDraft = useBankStore((s) => s.registrationDraft)
 
   const login = useCallback(
@@ -30,7 +29,6 @@ export function useAuth() {
   return {
     isAuthenticated,
     parent,
-    pendingPin,
     registrationDraft,
     login,
     register,

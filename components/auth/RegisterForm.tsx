@@ -45,19 +45,22 @@ export function RegisterForm() {
     reader.readAsDataURL(file)
   }
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     setError(null)
     setLoading(true)
-    setTimeout(() => {
-      const result = register(draft, confirmPassword)
-      setLoading(false)
+    try {
+      const result = await register(draft, confirmPassword)
       if (!result.ok) {
         setError(result.error ?? 'Something went wrong.')
         return
       }
       router.push('/verify-pin')
-    }, 600)
+    } catch {
+      setError('Something went wrong. Please try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (

@@ -36,12 +36,10 @@ interface BankState {
   monthlyActivity: MonthlyActivity[]
 
   registrationDraft: RegistrationDraft | null
-  pendingPin: string | null
 
   setAuthenticated: (value: boolean, remember?: boolean) => void
   setParent: (patch: Partial<Parent>) => void
   setRegistrationDraft: (draft: RegistrationDraft | null) => void
-  setPendingPin: (pin: string | null) => void
 
   addKidRecord: (kid: Kid) => void
   addCardRecord: (card: BankCard) => void
@@ -69,7 +67,6 @@ export const useBankStore = create<BankState>()(
       monthlyActivity: seedMonthlyActivity,
 
       registrationDraft: null,
-      pendingPin: null,
 
       setAuthenticated: (value, remember) =>
         set((state) => ({ isAuthenticated: value, rememberMe: remember ?? state.rememberMe })),
@@ -77,8 +74,6 @@ export const useBankStore = create<BankState>()(
       setParent: (patch) => set((state) => ({ parent: { ...state.parent, ...patch } })),
 
       setRegistrationDraft: (draft) => set({ registrationDraft: draft }),
-
-      setPendingPin: (pin) => set({ pendingPin: pin }),
 
       addKidRecord: (kid) => set((state) => ({ kids: [...state.kids, kid] })),
 
