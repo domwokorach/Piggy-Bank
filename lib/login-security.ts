@@ -22,6 +22,9 @@ export function recordFailedLogin(ip: string, userId: string | null, userAgent: 
 export interface ResolvedDevice {
   device: Device
   isNewDevice: boolean
+  // A previously blocked device trying again reads as more alarming than a
+  // device we've simply never seen before.
+  isSuspicious: boolean
 }
 
 export async function resolveDevice(
@@ -38,7 +41,7 @@ export async function resolveDevice(
 
   if (existing) {
     // Still surfaced as "new/unrecognised" on every login until trusted.
-    return { device: existing, isNewDevice: !existing.trusted }
+    return { device: existing, isNewDevice: !existing.trusted, isSuspicious: existing.blockedAt !== null }
   }
 
   const created = await prisma.device.create({
@@ -52,7 +55,7 @@ export async function resolveDevice(
       model: parsed.model,
     },
   })
-  return { device: created, isNewDevice: true }
+  return { device: created, isNewDevice: true, isSuspicious: false }
 }
 
 export async function recentlyAlertedForDevice(deviceRowId: string): Promise<boolean> {

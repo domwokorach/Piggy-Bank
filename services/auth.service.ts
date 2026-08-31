@@ -9,6 +9,15 @@ import type { Parent, RegistrationDraft } from '@/types'
  * Login and registration call the Next.js API routes backed by
  * Prisma/Postgres, Resend, and a signed session cookie (see app/api/auth/*).
  */
+interface LoginSecurityAlert {
+  isSuspicious: boolean
+  deviceLabel: string
+  location: string
+  dateTime: string
+  confirmUrl: string
+  blockUrl: string
+}
+
 export async function login(identifier: string, password: string, remember: boolean): Promise<ServiceResult> {
   const nativeDevice = await getNativeDeviceInfo()
 
@@ -17,8 +26,15 @@ export async function login(identifier: string, password: string, remember: bool
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ identifier, password, nativeDevice }),
   })
-  const result: (ServiceResult & { parent?: Parent }) = await response.json()
+  const result: ServiceResult & { parent?: Parent; security?: LoginSecurityAlert } = await response.json()
   if (!result.ok) {
+    if (result.code === 'RESET_REQUIRED') {
+      pushNotification(
+        'account_locked',
+        'Account locked',
+        'Your account was locked for security reasons. Reset your password to regain access.',
+      )
+    }
     return result
   }
 
@@ -27,6 +43,16 @@ export async function login(identifier: string, password: string, remember: bool
     setParent(result.parent)
   }
   setAuthenticated(true, remember)
+
+  if (result.security) {
+    const { isSuspicious, deviceLabel, location, dateTime, confirmUrl, blockUrl } = result.security
+    pushNotification(
+      isSuspicious ? 'suspicious_login' : 'new_login',
+      isSuspicious ? 'Suspicious login detected' : 'New login detected',
+      `A login was detected from ${deviceLabel} in ${location}.`,
+      { security: { deviceLabel: `${deviceLabel}`, location, dateTime, confirmUrl, blockUrl } },
+    )
+  }
 
   return { ok: true }
 }
@@ -46,7 +72,11 @@ export async function resetPassword(email: string, pin: string, newPassword: str
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, pin, newPassword }),
   })
-  return response.json()
+  const result: ServiceResult = await response.json()
+  if (result.ok) {
+    pushNotification('account_unlocked', 'Account unlocked', 'Your password was reset and your account is unlocked.')
+  }
+  return result
 }
 
 export async function logout(): Promise<void> {
@@ -83,6 +113,8 @@ export async function registerParent(draft: RegistrationDraft, confirmPassword: 
     status: 'pending',
   })
 
+  pushNotification('pin_verification', 'Verification PIN sent', `We sent a 6-digit code to ${draft.email}.`)
+
   return { ok: true }
 }
 
@@ -97,7 +129,11 @@ export async function resendPin(): Promise<ServiceResult> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email: registrationDraft.email }),
   })
-  return response.json()
+  const result: ServiceResult = await response.json()
+  if (result.ok) {
+    pushNotification('pin_verification', 'Verification PIN sent', `A new code was sent to ${registrationDraft.email}.`)
+  }
+  return result
 }
 
 export async function verifyPin(pin: string): Promise<ServiceResult> {

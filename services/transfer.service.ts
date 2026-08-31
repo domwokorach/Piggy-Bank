@@ -76,7 +76,8 @@ export async function transferParentToKid(kidId: string, amount: number, referen
   pushNotification(
     'payment_received',
     'Payment received',
-    `${kid.name} received £${amount.toFixed(2)} from your Parent Account. Ref: ${transactionNumber}`,
+    `${kid.name} received £${amount.toFixed(2)} from Parent Account.`,
+    { actionLabel: 'View Transaction', actionHref: `/transactions/${transactionNumber}` },
   )
 
   if (newKidBalance >= kid.savingsTarget && kid.savingsProgress < kid.savingsTarget) {
@@ -162,7 +163,8 @@ export async function transferKidToParent(kidId: string, amount: number, referen
   pushNotification(
     'transfer_completed',
     'Transfer completed',
-    `${kid.name} sent £${amount.toFixed(2)} back to the Parent Account. Ref: ${transactionNumber}`,
+    `${kid.name} sent £${amount.toFixed(2)} back to Parent Account.`,
+    { actionLabel: 'View Transaction', actionHref: `/transactions/${transactionNumber}` },
   )
 
   return { ok: true, transactionNumber }

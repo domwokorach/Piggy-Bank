@@ -62,7 +62,7 @@ export async function POST(request: Request) {
   const deviceCookieId = await getOrCreateDeviceCookie()
   const native: NativeDeviceInfo | undefined =
     nativeDevice && typeof nativeDevice === 'object' ? (nativeDevice as NativeDeviceInfo) : undefined
-  const { device, isNewDevice } = await resolveDevice(user.id, deviceCookieId, userAgent, native)
+  const { device, isNewDevice, isSuspicious } = await resolveDevice(user.id, deviceCookieId, userAgent, native)
   const location = await getApproximateLocation(ip)
 
   await prisma.device.update({
@@ -90,32 +90,56 @@ export async function POST(request: Request) {
     },
   })
 
-  if (isNewDevice && !(await recentlyAlertedForDevice(device.id))) {
-    try {
-      const now = new Date()
-      const confirmToken = await signLoginConfirmToken(loginEvent.id, 'confirm')
-      const blockToken = await signLoginConfirmToken(loginEvent.id, 'block')
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? new URL(request.url).origin
+  let security: {
+    isSuspicious: boolean
+    deviceLabel: string
+    location: string
+    dateTime: string
+    confirmUrl: string
+    blockUrl: string
+  } | undefined
 
-      await sendNewLoginAlertEmail(
-        user.email,
-        user.firstName,
-        {
-          date: formatDate(now.toISOString()),
-          time: formatTime(now.toISOString()),
-          location: location.city && location.country ? `${location.city}, ${location.country}` : 'Unknown location',
-          deviceLabel: device.label,
-          os: device.os ?? 'Unknown',
-          browser: device.browser ?? 'Unknown',
-          maskedIp: maskIp(ip),
-        },
-        `${baseUrl}/api/security/confirm-login?token=${confirmToken}`,
-        `${baseUrl}/api/security/confirm-login?token=${blockToken}`,
-      )
-    } catch (error) {
-      console.error('[login] failed to send new login alert email', error)
+  if (isNewDevice) {
+    const now = new Date()
+    const confirmToken = await signLoginConfirmToken(loginEvent.id, 'confirm')
+    const blockToken = await signLoginConfirmToken(loginEvent.id, 'block')
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? new URL(request.url).origin
+    const confirmUrl = `${baseUrl}/api/security/confirm-login?token=${confirmToken}`
+    const blockUrl = `${baseUrl}/api/security/confirm-login?token=${blockToken}`
+    const resolvedLocation =
+      location.city && location.country ? `${location.city}, ${location.country}` : 'Unknown location'
+
+    security = {
+      isSuspicious,
+      deviceLabel: device.label,
+      location: resolvedLocation,
+      dateTime: `${formatDate(now.toISOString())} · ${formatTime(now.toISOString())}`,
+      confirmUrl,
+      blockUrl,
+    }
+
+    if (!(await recentlyAlertedForDevice(device.id))) {
+      try {
+        await sendNewLoginAlertEmail(
+          user.email,
+          user.firstName,
+          {
+            date: formatDate(now.toISOString()),
+            time: formatTime(now.toISOString()),
+            location: resolvedLocation,
+            deviceLabel: device.label,
+            os: device.os ?? 'Unknown',
+            browser: device.browser ?? 'Unknown',
+            maskedIp: maskIp(ip),
+          },
+          confirmUrl,
+          blockUrl,
+        )
+      } catch (error) {
+        console.error('[login] failed to send new login alert email', error)
+      }
     }
   }
 
-  return NextResponse.json({ ok: true, parent: toPublicProfile(user) })
+  return NextResponse.json({ ok: true, parent: toPublicProfile(user), security })
 }

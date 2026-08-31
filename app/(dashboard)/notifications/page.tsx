@@ -1,37 +1,13 @@
 'use client'
 
-import { Bell, CheckCheck, Lock, PiggyBank, ShieldCheck, Snowflake, Target, Wallet, XCircle } from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
+import { Bell, CheckCheck } from 'lucide-react'
+import Link from 'next/link'
 import { EmptyState } from '@/components/ui/empty-state'
 import { PageHeader } from '@/components/ui/page-header'
 import { Button } from '@/components/ui/button'
 import { useNotifications } from '@/hooks/useNotifications'
+import { notificationIcon, toneForType } from '@/lib/notification-meta'
 import { cn, formatRelativeTime } from '@/lib/utils'
-import type { NotificationType } from '@/types'
-
-const iconFor: Record<NotificationType, LucideIcon> = {
-  payment_received: Wallet,
-  transfer_completed: CheckCheck,
-  transfer_failed: XCircle,
-  card_frozen: Snowflake,
-  card_unlocked: Lock,
-  new_kid_account: PiggyBank,
-  account_approved: ShieldCheck,
-  pin_verification: ShieldCheck,
-  savings_target_reached: Target,
-}
-
-const toneFor: Record<NotificationType, string> = {
-  payment_received: 'bg-success/10 text-success',
-  transfer_completed: 'bg-success/10 text-success',
-  transfer_failed: 'bg-destructive/10 text-destructive',
-  card_frozen: 'bg-warning/10 text-warning',
-  card_unlocked: 'bg-accent text-accent-foreground',
-  new_kid_account: 'bg-accent text-accent-foreground',
-  account_approved: 'bg-success/10 text-success',
-  pin_verification: 'bg-accent text-accent-foreground',
-  savings_target_reached: 'bg-accent text-accent-foreground',
-}
 
 export default function NotificationsPage() {
   const { notifications, unreadCount, markRead, markAllRead } = useNotifications()
@@ -56,29 +32,41 @@ export default function NotificationsPage() {
       ) : (
         <div className="space-y-2">
           {notifications.map((n) => {
-            const Icon = iconFor[n.type]
+            const Icon = notificationIcon[n.type]
             return (
-              <button
+              <div
                 key={n.id}
-                type="button"
-                onClick={() => markRead(n.id)}
                 className={cn(
                   'flex w-full items-start gap-3 rounded-2xl border p-4 text-left shadow-sm transition-colors',
                   n.read ? 'border-border bg-card' : 'border-primary/20 bg-accent/40',
                 )}
               >
-                <div className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-full', toneFor[n.type])}>
+                <button
+                  type="button"
+                  onClick={() => markRead(n.id)}
+                  className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-full', toneForType(n.type))}
+                  aria-label="Mark as read"
+                >
                   <Icon className="h-5 w-5" />
-                </div>
-                <div className="min-w-0 flex-1">
+                </button>
+                <button type="button" onClick={() => markRead(n.id)} className="min-w-0 flex-1 text-left">
                   <div className="flex items-center gap-2">
                     <p className="truncate text-sm font-medium text-foreground">{n.title}</p>
                     {!n.read && <span className="h-2 w-2 shrink-0 rounded-full bg-primary" />}
                   </div>
                   <p className="mt-0.5 text-sm text-muted-foreground">{n.message}</p>
                   <p className="mt-1 text-xs text-muted-foreground">{formatRelativeTime(n.date)}</p>
-                </div>
-              </button>
+                </button>
+                {n.actionLabel && n.actionHref && (
+                  <Link
+                    href={n.actionHref}
+                    onClick={() => markRead(n.id)}
+                    className="shrink-0 self-center text-xs font-medium text-primary hover:underline"
+                  >
+                    {n.actionLabel}
+                  </Link>
+                )}
+              </div>
             )
           })}
         </div>

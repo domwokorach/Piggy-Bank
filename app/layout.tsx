@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import { CookieConsentProvider } from '@/components/consent/CookieConsentProvider'
+import { NotificationCenter } from '@/components/notifications/NotificationCenter'
 
 export const metadata: Metadata = {
   title: 'Piggy Bank',
@@ -18,6 +19,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body>
         <CookieConsentProvider>{children}</CookieConsentProvider>
+        <NotificationCenter />
       </body>
     </html>
   )
