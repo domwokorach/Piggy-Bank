@@ -1,0 +1,221 @@
+import type {
+  AppNotification,
+  BankCard,
+  Kid,
+  MonthlyActivity,
+  Parent,
+  Transaction,
+} from '@/types'
+
+const daysAgo = (n: number) => {
+  const d = new Date()
+  d.setDate(d.getDate() - n)
+  return d.toISOString()
+}
+
+export const seedParent: Parent = {
+  id: 'parent-1',
+  firstName: 'Olivia',
+  lastName: 'Bennett',
+  dob: '1988-04-12',
+  mobile: '+44 7700 900123',
+  email: 'olivia.bennett@example.com',
+  username: 'olivia.b',
+  avatarUrl: undefined,
+  balance: 4238.62,
+  status: 'active',
+}
+
+export const seedKids: Kid[] = [
+  {
+    id: 'kid-1',
+    parentId: 'parent-1',
+    name: 'Freya Bennett',
+    color: '#0a2a6b',
+    balance: 84.5,
+    savingsTarget: 150,
+    savingsProgress: 84.5,
+    cardId: 'card-1',
+  },
+  {
+    id: 'kid-2',
+    parentId: 'parent-1',
+    name: 'Noah Bennett',
+    color: '#2f6fed',
+    balance: 32.2,
+    savingsTarget: 100,
+    savingsProgress: 32.2,
+    cardId: 'card-2',
+  },
+]
+
+export const seedCards: BankCard[] = [
+  {
+    id: 'card-1',
+    ownerKidId: 'kid-1',
+    cardholderName: 'Freya Bennett',
+    last4: '4821',
+    expiry: '09/29',
+    design: 'navy',
+    status: 'active',
+  },
+  {
+    id: 'card-2',
+    ownerKidId: 'kid-2',
+    cardholderName: 'Noah Bennett',
+    last4: '7734',
+    expiry: '02/28',
+    design: 'sky',
+    status: 'frozen',
+  },
+]
+
+export const seedTransactions: Transaction[] = [
+  {
+    id: 'txn-1',
+    accountId: 'parent-1',
+    type: 'transfer',
+    direction: 'out',
+    amount: 20,
+    counterparty: 'Freya Bennett',
+    reference: 'Weekly allowance',
+    date: daysAgo(1),
+  },
+  {
+    id: 'txn-2',
+    accountId: 'parent-1',
+    type: 'deposit',
+    direction: 'in',
+    amount: 2500,
+    counterparty: 'Salary',
+    reference: 'Monthly salary',
+    date: daysAgo(3),
+  },
+  {
+    id: 'txn-3',
+    accountId: 'parent-1',
+    type: 'spend',
+    direction: 'out',
+    amount: 64.2,
+    counterparty: 'Waitrose',
+    category: 'Groceries',
+    date: daysAgo(4),
+  },
+  {
+    id: 'txn-4',
+    accountId: 'parent-1',
+    type: 'transfer',
+    direction: 'out',
+    amount: 15,
+    counterparty: 'Noah Bennett',
+    reference: 'Pocket money',
+    date: daysAgo(6),
+  },
+  {
+    id: 'txn-5',
+    accountId: 'kid-1',
+    type: 'payment',
+    direction: 'in',
+    amount: 20,
+    counterparty: 'Parent Account',
+    reference: 'Weekly allowance',
+    date: daysAgo(1),
+  },
+  {
+    id: 'txn-6',
+    accountId: 'kid-1',
+    type: 'spend',
+    direction: 'out',
+    amount: 4.5,
+    counterparty: 'Greggs',
+    category: 'Food',
+    date: daysAgo(2),
+  },
+  {
+    id: 'txn-7',
+    accountId: 'kid-1',
+    type: 'savings',
+    direction: 'in',
+    amount: 10,
+    counterparty: 'Savings pot',
+    date: daysAgo(5),
+  },
+  {
+    id: 'txn-8',
+    accountId: 'kid-2',
+    type: 'payment',
+    direction: 'in',
+    amount: 15,
+    counterparty: 'Parent Account',
+    reference: 'Pocket money',
+    date: daysAgo(6),
+  },
+  {
+    id: 'txn-9',
+    accountId: 'kid-2',
+    type: 'spend',
+    direction: 'out',
+    amount: 8.99,
+    counterparty: 'App Store',
+    category: 'Entertainment',
+    date: daysAgo(7),
+  },
+]
+
+export const seedNotifications: AppNotification[] = [
+  {
+    id: 'note-1',
+    type: 'payment_received',
+    title: 'Payment received',
+    message: 'Freya received £20.00 from your Parent Account.',
+    date: daysAgo(1),
+    read: false,
+  },
+  {
+    id: 'note-2',
+    type: 'card_frozen',
+    title: "Noah's card frozen",
+    message: "Noah Bennett's card was frozen. Spending is disabled.",
+    date: daysAgo(2),
+    read: false,
+  },
+  {
+    id: 'note-3',
+    type: 'transfer_completed',
+    title: 'Transfer completed',
+    message: 'You sent £15.00 to Noah Bennett.',
+    date: daysAgo(6),
+    read: true,
+  },
+  {
+    id: 'note-4',
+    type: 'savings_target_reached',
+    title: 'Savings milestone',
+    message: 'Freya is 56% of the way to her £150 savings target.',
+    date: daysAgo(5),
+    read: true,
+  },
+  {
+    id: 'note-5',
+    type: 'new_kid_account',
+    title: 'Kid account linked',
+    message: 'Noah Bennett was added to your family account.',
+    date: daysAgo(30),
+    read: true,
+  },
+]
+
+export const seedMonthlyActivity: MonthlyActivity[] = [
+  { month: 'Jan', toKids: 120, received: 2500, savings: 60, spending: 1450 },
+  { month: 'Feb', toKids: 140, received: 2500, savings: 80, spending: 1320 },
+  { month: 'Mar', toKids: 110, received: 2600, savings: 90, spending: 1510 },
+  { month: 'Apr', toKids: 160, received: 2600, savings: 100, spending: 1390 },
+  { month: 'May', toKids: 150, received: 2650, savings: 120, spending: 1480 },
+  { month: 'Jun', toKids: 175, received: 2650, savings: 130, spending: 1600 },
+  { month: 'Jul', toKids: 190, received: 2700, savings: 140, spending: 1550 },
+  { month: 'Aug', toKids: 165, received: 2700, savings: 150, spending: 1420 },
+  { month: 'Sep', toKids: 145, received: 2750, savings: 160, spending: 1380 },
+  { month: 'Oct', toKids: 155, received: 2750, savings: 170, spending: 1460 },
+  { month: 'Nov', toKids: 180, received: 2800, savings: 180, spending: 1620 },
+  { month: 'Dec', toKids: 210, received: 2800, savings: 200, spending: 1750 },
+]

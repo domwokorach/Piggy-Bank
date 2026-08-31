@@ -1,0 +1,90 @@
+/* Design tokens — deep-blue UK digital-banking palette. */
+:root {
+  --radius: 20px;
+
+  --background: #f4f6fb;
+  --foreground: #0a1330;
+
+  --card: #ffffff;
+  --card-foreground: #0a1330;
+
+  --popover: #ffffff;
+  --popover-foreground: #0a1330;
+
+  --primary: #0a2a6b;
+  --primary-foreground: #ffffff;
+
+  --secondary: #eef1f8;
+  --secondary-foreground: #0a2a6b;
+
+  --muted: #eef1f6;
+  --muted-foreground: #64708a;
+
+  --accent: #e8edfb;
+  --accent-foreground: #0a2a6b;
+
+  --destructive: #d0342c;
+  --destructive-foreground: #ffffff;
+
+  --success: #0f7a56;
+  --success-foreground: #ffffff;
+
+  --warning: #b26a00;
+  --warning-foreground: #ffffff;
+
+  --border: #e4e8f1;
+  --input: #e4e8f1;
+  --ring: #0a2a6b;
+  --chart-1: #0a2a6b;
+  --chart-2: #2f6fed;
+  --chart-3: #6fa8ff;
+  --chart-4: #0f7a56;
+  --chart-5: #b26a00;
+  --sidebar: #0a1330;
+  --sidebar-foreground: #f4f6fb;
+  --sidebar-primary: #2f6fed;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #142049;
+  --sidebar-accent-foreground: #f4f6fb;
+  --sidebar-border: rgba(255, 255, 255, 0.08);
+  --sidebar-ring: #2f6fed;
+}
+
+.dark {
+  --background: #070c1e;
+  --foreground: #f4f6fb;
+  --card: #101832;
+  --card-foreground: #f4f6fb;
+  --popover: #101832;
+  --popover-foreground: #f4f6fb;
+  --primary: #6fa8ff;
+  --primary-foreground: #06122e;
+  --secondary: #142049;
+  --secondary-foreground: #f4f6fb;
+  --muted: #142049;
+  --muted-foreground: #9aa7c7;
+  --accent: #142049;
+  --accent-foreground: #f4f6fb;
+  --destructive: #ff6961;
+  --destructive-foreground: #06122e;
+  --success: #2fbf8f;
+  --success-foreground: #06122e;
+  --warning: #f2a93c;
+  --warning-foreground: #06122e;
+  --border: rgba(255, 255, 255, 0.08);
+  --input: rgba(255, 255, 255, 0.08);
+  --ring: #6fa8ff;
+  --chart-1: #6fa8ff;
+  --chart-2: #2f6fed;
+  --chart-3: #a9c6ff;
+  --chart-4: #2fbf8f;
+  --chart-5: #f2a93c;
+  --sidebar: #070c1e;
+  --sidebar-foreground: #f4f6fb;
+  --sidebar-primary: #6fa8ff;
+  --sidebar-primary-foreground: #06122e;
+  --sidebar-accent: #142049;
+  --sidebar-accent-foreground: #f4f6fb;
+  --sidebar-border: rgba(255, 255, 255, 0.08);
+  --sidebar-ring: #6fa8ff;
+}

@@ -1,0 +1,10 @@
+/* Base typography — Geist for a clean, professional banking feel. */
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}

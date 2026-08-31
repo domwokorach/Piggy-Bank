@@ -1,0 +1,14 @@
+/* Custom keyframes beyond tw-animate-css's animate-in/animate-out utilities. */
+@keyframes soft-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.animate-soft-pulse {
+  animation: soft-pulse 1.6s ease-in-out infinite;
+}
