@@ -20,11 +20,11 @@ export default function AddKidPage() {
   const [savingsTarget, setSavingsTarget] = useState('50')
   const [color, setColor] = useState(colors[0])
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     if (!name.trim()) return
-    addKid(name.trim(), Number(savingsTarget) || 0, color)
-    router.push('/kids')
+    const result = await addKid(name.trim(), Number(savingsTarget) || 0, color)
+    if (result.ok) router.push('/kids')
   }
 
   return (

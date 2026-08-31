@@ -2,6 +2,7 @@ export type AccountStatus = 'pending' | 'active' | 'pending_closure' | 'closed'
 
 export interface Parent {
   id: string
+  profileId?: string
   firstName: string
   lastName: string
   dob: string

@@ -31,19 +31,25 @@ export function pushNotification(
   useToastStore.getState().enqueue(notification)
 }
 
-export function markRead(notificationId: string): void {
+export async function markRead(notificationId: string): Promise<void> {
   useBankStore.getState().markNotificationRead(notificationId)
+  await fetch('/api/notifications', {
+    method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: notificationId }),
+  })
 }
 
-export function markAllRead(): void {
+export async function markAllRead(): Promise<void> {
   useBankStore.getState().markAllNotificationsRead()
+  await fetch('/api/notifications', {
+    method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ all: true }),
+  })
 }
 
 // A manual close (button click, clicking through to an action) implies the
 // user actually saw it, so it's marked read in Notification History.
 export function dismissToast(notificationId: string): void {
   useToastStore.getState().dismiss(notificationId)
-  markRead(notificationId)
+  void markRead(notificationId)
 }
 
 // A silent timeout expiry doesn't imply the user saw it — leave it unread.

@@ -9,7 +9,7 @@ export async function GET() {
   }
 
   const devices = await prisma.device.findMany({
-    where: { userId: auth.user.id },
+    where: { profileId: auth.user.id },
     orderBy: { lastActiveAt: 'desc' },
   })
 

@@ -12,7 +12,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ tra
   const { transactionNumber } = await params
   const transaction = await prisma.transaction.findUnique({ where: { transactionNumber } })
 
-  if (!transaction || transaction.userId !== auth.user.id) {
+  if (!transaction || transaction.profileId !== auth.user.id) {
     return NextResponse.json({ ok: false, error: 'Transaction not found.' }, { status: 404 })
   }
 

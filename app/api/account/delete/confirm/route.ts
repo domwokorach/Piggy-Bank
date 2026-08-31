@@ -26,22 +26,20 @@ export async function POST() {
     )
   }
 
-  // NOTE: Kids Accounts, cards, and transfers are not yet backed by Postgres
-  // (still mocked client-side) — this closure only affects the parent
-  // Profile record. Freezing linked cards / handling Kids Accounts per
-  // policy still needs to be wired up once those move off the mock store.
-  await prisma.profile.update({
-    where: { id: user.id },
-    data: {
-      status: 'CLOSED',
-      closedAt: new Date(),
-      deletionPinHash: null,
-      deletionPinExpiresAt: null,
-      deletionAttempts: 0,
-      deletionPinLastSentAt: null,
-      deletionVerifiedAt: null,
-    },
-  })
+  await prisma.$transaction([
+    prisma.profile.update({
+      where: { id: user.id },
+      data: {
+        status: 'CLOSED', closedAt: new Date(), deletionPinHash: null, deletionPinExpiresAt: null,
+        deletionAttempts: 0, deletionPinLastSentAt: null, deletionVerifiedAt: null,
+      },
+    }),
+    prisma.account.updateMany({ where: { profileId: user.id }, data: { status: 'CLOSED' } }),
+    prisma.card.updateMany({ where: { account: { profileId: user.id } }, data: { status: 'CANCELLED' } }),
+    prisma.notification.create({
+      data: { profileId: user.id, type: 'ACCOUNT_CLOSED', title: 'Account closed', message: 'Your Piggy Bank account has been closed.' },
+    }),
+  ])
 
   await revokeAllSessionsForUser(user.id)
   await logAccountEvent(user.id, 'account_closed')

@@ -5,7 +5,7 @@ import { createServerClient } from '@supabase/ssr'
 // sessions don't silently expire between calls. Scoped to /api — the
 // dashboard route group already guards itself client-side (see
 // app/(dashboard)/layout.tsx), so no page-level redirect logic lives here.
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request })
 
   const supabase = createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
@@ -27,5 +27,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/api/:path*'],
+  matcher: ['/api/:path*', '/((?!_next/static|_next/image|favicon.ico).*)'],
 }

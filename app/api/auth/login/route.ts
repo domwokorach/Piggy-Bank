@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { createClient } from '@/lib/supabase/server'
-import { createLoginSessionForUser, toPublicProfile } from '@/lib/auth'
+import { createLoginSessionForUser } from '@/lib/auth'
+import { toPublicParent } from '@/lib/banking'
 import { getOrCreateDeviceCookie } from '@/lib/device-cookie'
 import { getApproximateLocation } from '@/lib/geolocation'
 import { isRateLimited, recentlyAlertedForDevice, recordFailedLogin, resolveDevice } from '@/lib/login-security'
@@ -134,6 +135,16 @@ export async function POST(request: Request) {
       blockUrl,
     }
 
+    await prisma.notification.create({
+      data: {
+        profileId: profile.id,
+        type: isSuspicious ? 'SUSPICIOUS_LOGIN' : 'NEW_LOGIN',
+        title: isSuspicious ? 'Suspicious login detected' : 'New login detected',
+        message: `A login was detected from ${device.label} in ${resolvedLocation}.`,
+        metadata: { security },
+      },
+    })
+
     if (!(await recentlyAlertedForDevice(device.id))) {
       try {
         await sendNewLoginAlertEmail(
@@ -157,5 +168,14 @@ export async function POST(request: Request) {
     }
   }
 
-  return NextResponse.json({ ok: true, parent: toPublicProfile(profile), security })
+  const parentAccount = await prisma.account.findFirst({
+    where: { profileId: profile.id, type: 'PARENT', status: { not: 'CLOSED' } },
+    include: { cards: { take: 1 } },
+  })
+  if (!parentAccount) {
+    await supabase.auth.signOut()
+    return NextResponse.json({ ok: false, error: 'Your banking profile is incomplete. Contact support.' }, { status: 409 })
+  }
+
+  return NextResponse.json({ ok: true, parent: toPublicParent(profile, parentAccount, parentAccount.cards[0]), security })
 }

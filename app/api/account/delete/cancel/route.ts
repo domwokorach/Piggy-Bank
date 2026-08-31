@@ -14,18 +14,19 @@ export async function POST() {
     return NextResponse.json({ ok: false, error: 'No account closure is in progress.' }, { status: 400 })
   }
 
-  await prisma.profile.update({
-    where: { id: user.id },
-    data: {
-      status: 'ACTIVE',
-      deletionPinHash: null,
-      deletionPinExpiresAt: null,
-      deletionAttempts: 0,
-      deletionPinLastSentAt: null,
-      deletionVerifiedAt: null,
-      closureRequestedAt: null,
-    },
-  })
+  await prisma.$transaction([
+    prisma.profile.update({
+      where: { id: user.id },
+      data: {
+        status: 'ACTIVE', deletionPinHash: null, deletionPinExpiresAt: null, deletionAttempts: 0,
+        deletionPinLastSentAt: null, deletionVerifiedAt: null, closureRequestedAt: null,
+      },
+    }),
+    prisma.account.updateMany({ where: { profileId: user.id, status: 'PENDING_CLOSURE' }, data: { status: 'ACTIVE' } }),
+    prisma.notification.create({
+      data: { profileId: user.id, type: 'ACCOUNT_CLOSURE_CANCELLED', title: 'Account closure cancelled', message: 'Your account remains active.' },
+    }),
+  ])
 
   await logAccountEvent(user.id, 'closure_cancelled')
 

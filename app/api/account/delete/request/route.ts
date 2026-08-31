@@ -27,18 +27,19 @@ export async function POST() {
   const pin = generatePin()
   const deletionPinHash = await hashPin(pin)
 
-  await prisma.profile.update({
-    where: { id: user.id },
-    data: {
-      status: 'PENDING_CLOSURE',
-      deletionPinHash,
-      deletionPinExpiresAt: pinExpiryDate(),
-      deletionAttempts: 0,
-      deletionPinLastSentAt: new Date(),
-      deletionVerifiedAt: null,
-      closureRequestedAt: new Date(),
-    },
-  })
+  await prisma.$transaction([
+    prisma.profile.update({
+      where: { id: user.id },
+      data: {
+        status: 'PENDING_CLOSURE', deletionPinHash, deletionPinExpiresAt: pinExpiryDate(),
+        deletionAttempts: 0, deletionPinLastSentAt: new Date(), deletionVerifiedAt: null, closureRequestedAt: new Date(),
+      },
+    }),
+    prisma.account.updateMany({ where: { profileId: user.id, status: 'ACTIVE' }, data: { status: 'PENDING_CLOSURE' } }),
+    prisma.notification.create({
+      data: { profileId: user.id, type: 'ACCOUNT_CLOSURE_REQUESTED', title: 'Account closure requested', message: 'Your account closure is awaiting email verification.' },
+    }),
+  ])
 
   await logAccountEvent(user.id, 'closure_requested')
 

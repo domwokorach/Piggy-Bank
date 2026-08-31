@@ -3,6 +3,8 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { createClient } from '@/lib/supabase/server'
 import { validateRegistration } from '@/lib/validation'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { generateAccountNumber } from '@/lib/banking'
 
 function generateCustomerNumber(): string {
   return `PB${Date.now().toString(36).toUpperCase()}${randomInt(100, 1000)}`
@@ -47,20 +49,38 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: message }, { status: 400 })
   }
 
-  await prisma.profile.create({
-    data: {
-      id: data.user.id,
-      firstName,
-      lastName,
-      dob: new Date(dob),
-      mobile,
-      email: email.toLowerCase(),
-      username,
-      avatarUrl: avatarUrl || null,
-      customerNumber: generateCustomerNumber(),
-      status: 'PENDING',
-    },
-  })
+  try {
+    await prisma.$transaction(async (tx) => {
+      await tx.profile.create({
+        data: {
+          id: data.user!.id,
+          firstName,
+          lastName,
+          dob: new Date(dob),
+          mobile,
+          email: email.toLowerCase(),
+          username,
+          avatarUrl: avatarUrl || null,
+          customerNumber: generateCustomerNumber(),
+          status: 'PENDING',
+        },
+      })
+      await tx.account.create({
+        data: {
+          profileId: data.user!.id,
+          type: 'PARENT',
+          name: `${firstName} ${lastName}`,
+          accountNumber: generateAccountNumber(),
+          sortCode: process.env.DEFAULT_SORT_CODE ?? '20-45-67',
+          status: 'PENDING',
+        },
+      })
+    })
+  } catch (error) {
+    await createAdminClient().auth.admin.deleteUser(data.user.id).catch(() => undefined)
+    console.error('[auth/register] failed to create banking profile', error)
+    return NextResponse.json({ ok: false, error: 'Could not create your account. Please try again.' }, { status: 500 })
+  }
 
   return NextResponse.json({ ok: true })
 }

@@ -10,7 +10,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ de
 
   const { deviceRowId } = await params
   const device = await prisma.device.findUnique({ where: { id: deviceRowId } })
-  if (!device || device.userId !== auth.user.id) {
+  if (!device || device.profileId !== auth.user.id) {
     return NextResponse.json({ ok: false, error: 'Device not found.' }, { status: 404 })
   }
 

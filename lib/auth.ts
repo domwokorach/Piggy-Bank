@@ -87,6 +87,13 @@ export function logAccountEvent(profileId: string, event: string, metadata?: Rec
   })
 }
 
+export async function hasRequiredAssurance(): Promise<boolean> {
+  const supabase = await createClient()
+  const { data, error } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
+  if (error || !data) return false
+  return data.nextLevel !== 'aal2' || data.currentLevel === 'aal2'
+}
+
 export type ClientAccountStatus = 'pending' | 'active' | 'pending_closure' | 'closed'
 
 export function toClientStatus(profile: Pick<Profile, 'status'>): ClientAccountStatus {

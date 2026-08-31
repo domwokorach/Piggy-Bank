@@ -1,12 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import {
-  seedCards,
-  seedKids,
   seedMonthlyActivity,
-  seedNotifications,
-  seedParent,
-  seedTransactions,
 } from '@/lib/mock-data'
 import type {
   AppNotification,
@@ -44,6 +39,10 @@ interface BankState {
   setParent: (patch: Partial<Parent>) => void
   setRegistrationDraft: (draft: RegistrationDraft | null) => void
   setSecurityPinHash: (hash: string | null) => void
+  replaceKids: (kids: Kid[]) => void
+  replaceCards: (cards: BankCard[]) => void
+  replaceTransactions: (transactions: Transaction[]) => void
+  replaceNotifications: (notifications: AppNotification[]) => void
 
   addKidRecord: (kid: Kid) => void
   addCardRecord: (card: BankCard) => void
@@ -63,11 +62,14 @@ export const useBankStore = create<BankState>()(
       isAuthenticated: false,
       rememberMe: false,
 
-      parent: seedParent,
-      kids: seedKids,
-      cards: seedCards,
-      transactions: seedTransactions,
-      notifications: seedNotifications,
+      parent: {
+        id: '', firstName: '', lastName: '', dob: '', mobile: '', email: '', username: '',
+        balance: 0, status: 'pending', accountNumberLast4: '', cardLast4: '',
+      },
+      kids: [],
+      cards: [],
+      transactions: [],
+      notifications: [],
       monthlyActivity: seedMonthlyActivity,
 
       registrationDraft: null,
@@ -82,6 +84,11 @@ export const useBankStore = create<BankState>()(
       setRegistrationDraft: (draft) => set({ registrationDraft: draft }),
 
       setSecurityPinHash: (hash) => set({ securityPinHash: hash }),
+
+      replaceKids: (kids) => set({ kids }),
+      replaceCards: (cards) => set({ cards }),
+      replaceTransactions: (transactions) => set({ transactions }),
+      replaceNotifications: (notifications) => set({ notifications }),
 
       addKidRecord: (kid) => set((state) => ({ kids: [...state.kids, kid] })),
 

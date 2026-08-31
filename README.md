@@ -36,11 +36,13 @@ Motion for React
 Capacitor
 PostgreSQL
 Prisma
+Supabase Auth
+Supabase Realtime
 ```
 
-> **Status note:** the UI, mocked data layer, and Capacitor packaging are built.
-> PostgreSQL + Prisma (and the real-time API layer) are the planned backend and
-> are not wired up yet — see [Status](#status).
+The authenticated banking backend uses PostgreSQL as its source of truth,
+Prisma for server-only access, Supabase Auth for identity, and Supabase
+Realtime for live cache refreshes. See [backend architecture](docs/backend-architecture.md).
 
 ## Getting Started
 
@@ -60,6 +62,13 @@ Run development server:
 
 ```bash
 npm run dev
+```
+
+Apply the database migration first:
+
+```bash
+npm run db:generate
+npm run db:migrate
 ```
 
 Open:
@@ -92,11 +101,13 @@ Never commit real secrets.
 
 ```env
 DATABASE_URL=
-AUTH_SECRET=
+DIRECT_URL=
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
 NEXT_PUBLIC_APP_URL=
-EMAIL_PROVIDER_API_KEY=
-SMS_AUTH_TOKEN=
-REALTIME_URL=
+BACKUP_DATABASE_URL=
+BACKUP_ENCRYPTION_KEY=
 ```
 
 See [`.env.example`](.env.example) for the full list.
@@ -108,6 +119,9 @@ npm run dev
 npm run build
 npm run start
 npm run lint
+npm run db:generate
+npm run db:migrate
+npm run db:backup
 npm run cap:sync
 ```
 

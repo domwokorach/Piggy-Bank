@@ -1,11 +1,10 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { Copy, CopyCheck, Eye, EyeOff } from 'lucide-react'
 import { ConfirmPinDialog } from './ConfirmPinDialog'
 import { fetchSensitiveAccountDetails } from '@/services/account-security.service'
-import { pushNotification } from '@/services/notification.service'
 import type { Parent, SensitiveAccountDetails } from '@/types'
 
 const AUTO_HIDE_MS = 30_000
@@ -23,17 +22,17 @@ export function AccountCardDetails({ parent }: AccountCardDetailsProps) {
 
   const revealed = details !== null
 
-  const clearHideTimer = () => {
+  const clearHideTimer = useCallback(() => {
     if (hideTimer.current) {
       clearTimeout(hideTimer.current)
       hideTimer.current = null
     }
-  }
+  }, [])
 
-  const hide = () => {
+  const hide = useCallback(() => {
     clearHideTimer()
     setDetails(null)
-  }
+  }, [clearHideTimer])
 
   // Auto-hide after a short window, and whenever the tab/app loses focus or
   // is backgrounded — sensitive fields should never sit revealed unattended.
@@ -41,7 +40,7 @@ export function AccountCardDetails({ parent }: AccountCardDetailsProps) {
     if (!revealed) return undefined
     hideTimer.current = setTimeout(hide, AUTO_HIDE_MS)
     return clearHideTimer
-  }, [revealed])
+  }, [clearHideTimer, hide, revealed])
 
   useEffect(() => {
     const hideIfBackgrounded = () => {
@@ -53,9 +52,9 @@ export function AccountCardDetails({ parent }: AccountCardDetailsProps) {
       document.removeEventListener('visibilitychange', hideIfBackgrounded)
       window.removeEventListener('blur', hideIfBackgrounded)
     }
-  }, [])
+  }, [hide])
 
-  useEffect(() => clearHideTimer, [])
+  useEffect(() => clearHideTimer, [clearHideTimer])
 
   const handleToggle = () => {
     if (revealed) {
@@ -71,11 +70,8 @@ export function AccountCardDetails({ parent }: AccountCardDetailsProps) {
     try {
       const result = await fetchSensitiveAccountDetails()
       setDetails(result)
-      pushNotification(
-        'card_details_viewed',
-        'Account details viewed',
-        'Your card and account details were revealed on this device.',
-      )
+    } catch {
+      setDetails(null)
     } finally {
       setLoading(false)
     }

@@ -22,9 +22,9 @@ export function FreezeCardControl({ card }: FreezeCardControlProps) {
   const { setCardStatus } = useKids()
   const [pendingStatus, setPendingStatus] = useState<CardStatus | null>(null)
 
-  const confirmChange = () => {
+  const confirmChange = async () => {
     if (pendingStatus) {
-      setCardStatus(card.id, pendingStatus)
+      await setCardStatus(card.id, pendingStatus)
     }
     setPendingStatus(null)
   }

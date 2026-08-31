@@ -1,53 +1,24 @@
 import { useBankStore } from '@/store/bank-store'
-import { generateId } from '@/lib/utils'
-import { pushNotification } from './notification.service'
 import type { BankCard, CardStatus, Kid } from '@/types'
+import type { ServiceResult } from './types'
 
-export function addKid(name: string, savingsTarget: number, color: string): Kid {
-  const { parent, addKidRecord, addCardRecord } = useBankStore.getState()
-
-  const kidId = generateId('kid')
-  const cardId = generateId('card')
-
-  const kid: Kid = {
-    id: kidId,
-    parentId: parent.id,
-    name,
-    color,
-    balance: 0,
-    savingsTarget,
-    savingsProgress: 0,
-    cardId,
+export async function addKid(name: string, savingsTarget: number, color: string): Promise<ServiceResult & { kid?: Kid }> {
+  const response = await fetch('/api/kids', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, savingsTarget, color }),
+  })
+  const result: ServiceResult & { kid?: Kid; card?: BankCard } = await response.json()
+  if (result.ok && result.kid) {
+    useBankStore.getState().addKidRecord(result.kid)
+    if (result.card) useBankStore.getState().addCardRecord(result.card)
   }
-
-  const card: BankCard = {
-    id: cardId,
-    ownerKidId: kidId,
-    cardholderName: name,
-    last4: Math.floor(1000 + Math.random() * 9000).toString(),
-    expiry: '12/30',
-    design: 'navy',
-    status: 'active',
-  }
-
-  addKidRecord(kid)
-  addCardRecord(card)
-
-  pushNotification('new_kid_account', 'Kid account created', `${name} was added to your family account.`)
-
-  return kid
+  return result
 }
 
-export function setCardStatus(cardId: string, status: CardStatus): void {
-  const { cards, updateCard } = useBankStore.getState()
-  const card = cards.find((c) => c.id === cardId)
-  if (!card) return
-
-  updateCard(cardId, { status })
-
-  if (status === 'frozen') {
-    pushNotification('card_frozen', 'Card frozen', `${card.cardholderName}'s card was frozen. Spending is disabled.`)
-  } else if (status === 'active') {
-    pushNotification('card_unlocked', 'Card unlocked', `${card.cardholderName}'s card is now active.`)
-  }
+export async function setCardStatus(cardId: string, status: CardStatus): Promise<ServiceResult> {
+  const response = await fetch(`/api/cards/${encodeURIComponent(cardId)}`, {
+    method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }),
+  })
+  const result: ServiceResult & { card?: BankCard } = await response.json()
+  if (result.ok && result.card) useBankStore.getState().updateCard(cardId, result.card)
+  return result
 }

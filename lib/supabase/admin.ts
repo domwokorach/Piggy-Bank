@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import 'server-only'
 
 // Service-role client — bypasses RLS and can perform admin-only auth
 // operations (e.g. force-revoking a compromised user's Supabase sessions).

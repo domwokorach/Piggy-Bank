@@ -1,7 +1,5 @@
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider = "postgresql"
 }
 
 generator client {
@@ -36,8 +34,8 @@ model Profile {
   lastName  String
   dob       DateTime
   mobile    String
-  email     String  @unique // mirrors auth.users.email, for querying/joins
-  username  String  @unique
+  email     String   @unique // mirrors auth.users.email, for querying/joins
+  username  String   @unique
   avatarUrl String?
 
   addressLine1   String?
@@ -58,13 +56,13 @@ model Profile {
 
   // Account-closure flow — our own PIN-over-email confirmation, independent
   // of Supabase Auth (which has no such feature).
-  deletionPinHash        String?
-  deletionPinExpiresAt   DateTime?
-  deletionAttempts       Int       @default(0)
-  deletionPinLastSentAt  DateTime?
-  deletionVerifiedAt     DateTime?
-  closureRequestedAt     DateTime?
-  closedAt               DateTime?
+  deletionPinHash       String?
+  deletionPinExpiresAt  DateTime?
+  deletionAttempts      Int       @default(0)
+  deletionPinLastSentAt DateTime?
+  deletionVerifiedAt    DateTime?
+  closureRequestedAt    DateTime?
+  closedAt              DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -88,7 +86,7 @@ enum DeviceType {
 
 model Device {
   id        String  @id @default(cuid())
-  profile   Profile @relation(fields: [profileId], references: [id])
+  profile   Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
   profileId String  @db.Uuid
 
   // Opaque, long-lived identifier from the `piggy_device` cookie (or native
@@ -125,7 +123,7 @@ model LoginSession {
   // tracks per-login device/audit metadata (renamed from the old `Session`
   // model, which played the same role for the custom-JWT auth it replaces).
   id        String  @id @default(cuid())
-  profile   Profile @relation(fields: [profileId], references: [id])
+  profile   Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
   profileId String  @db.Uuid
 
   deviceRowId String?
@@ -140,6 +138,7 @@ model LoginSession {
   revokedAt    DateTime?
 
   @@index([profileId])
+  @@index([profileId, revokedAt])
   @@map("login_sessions")
 }
 
@@ -194,17 +193,19 @@ enum AccountType {
 
 model Account {
   id        String  @id @default(cuid())
-  profile   Profile @relation(fields: [profileId], references: [id])
+  profile   Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
   profileId String  @db.Uuid
 
   // A kid account belongs to a parent's own account, not directly to a
   // second profile — kids don't hold their own Supabase Auth identity.
-  parentAccount   Account?  @relation("KidOfParent", fields: [parentAccountId], references: [id])
+  parentAccount   Account?  @relation("KidOfParent", fields: [parentAccountId], references: [id], onDelete: Cascade)
   parentAccountId String?
   kidAccounts     Account[] @relation("KidOfParent")
 
   type          AccountType
   name          String
+  avatarUrl     String?
+  color         String?
   accountNumber String        @unique
   sortCode      String
   balance       Decimal       @default(0) @db.Decimal(12, 2)
@@ -219,6 +220,7 @@ model Account {
   transactionsIn  Transaction[] @relation("ToAccount")
 
   @@index([profileId])
+  @@index([profileId, type, status])
   @@map("accounts")
 }
 
@@ -236,12 +238,12 @@ enum CardStatus {
 
 model Card {
   id        String  @id @default(cuid())
-  account   Account @relation(fields: [accountId], references: [id])
+  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
   accountId String
 
   cardholderName String
   // Tokenised reference from the card provider — never a raw PAN.
-  providerCardId String    @unique
+  providerCardId String     @unique
   last4          String
   brand          CardBrand
   expMonth       Int
@@ -250,10 +252,11 @@ model Card {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  // No CVV column, ever — see AGENTS.md card-details security rules.
 
   @@index([accountId])
+  @@index([accountId, status])
   @@map("cards")
-  // No CVV column, ever — see AGENTS.md card-details security rules.
 }
 
 enum TransactionType {
@@ -274,18 +277,18 @@ enum TransactionStatus {
 }
 
 model Transaction {
-  id String @id @default(cuid())
+  id                String @id @default(cuid())
   // Public-facing reference, e.g. PB-20260831-8F3K2A. Never expose `id` above to clients.
   transactionNumber String @unique
 
   // Owning profile — the family account this transaction belongs to.
-  profile   Profile @relation(fields: [profileId], references: [id])
+  profile   Profile @relation(fields: [profileId], references: [id], onDelete: Restrict)
   profileId String  @db.Uuid
 
   type   TransactionType
   status TransactionStatus @default(COMPLETED)
 
-  amount Float
+  amount Decimal @db.Decimal(12, 2)
 
   // Display labels always shown; the FKs below are populated once the
   // counterparty is a real Account row (kids/cards are being migrated off
@@ -305,6 +308,7 @@ model Transaction {
   completedAt DateTime?
 
   @@index([profileId])
+  @@index([profileId, createdAt])
   @@map("transactions")
 }
 
@@ -330,18 +334,20 @@ enum NotificationType {
 
 model Notification {
   id        String  @id @default(cuid())
-  profile   Profile @relation(fields: [profileId], references: [id])
+  profile   Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
   profileId String  @db.Uuid
 
   type        NotificationType
   title       String
   message     String
-  read        Boolean @default(false)
+  read        Boolean          @default(false)
   actionLabel String?
   actionHref  String?
+  metadata    Json?
 
   createdAt DateTime @default(now())
 
   @@index([profileId])
+  @@index([profileId, read, createdAt])
   @@map("notifications")
 }

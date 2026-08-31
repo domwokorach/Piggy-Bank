@@ -24,7 +24,10 @@ export async function POST(request: Request) {
     )
   }
 
-  await prisma.profile.update({ where: { id: data.user.id }, data: { status: 'ACTIVE' } })
+  await prisma.$transaction([
+    prisma.profile.update({ where: { id: data.user.id }, data: { status: 'ACTIVE' } }),
+    prisma.account.updateMany({ where: { profileId: data.user.id, type: 'PARENT' }, data: { status: 'ACTIVE' } }),
+  ])
 
   // verifyOtp signs the user in — this endpoint only confirms the email, it
   // shouldn't leave them silently logged in ahead of the actual login step.
